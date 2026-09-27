@@ -699,7 +699,8 @@ with st.sidebar:
         st.markdown("""
 | Demo | Jam proses | Yang ditunjukkan |
 |---|---|---|
-| 00:00 | 08:00 | Batch 1 ton dimuat, KA 27,7 %. Cerah: PLTS mengisi baterai, efek rumah kaca menghemat biomassa |
+| 00:00 | 08:00 | Tekan **Mulai**. Tab **Diagram alir**: jelaskan alur tungku batang padi → filter → penukar panas hibrida → rumah pengering, dan PLTS → baterai → blower & IoT |
+| 00:40 | 11:12 | Pindah ke **Panel operasional**: KA awal 27,7 %, 3 zona rak, pusat kendali |
 | 00:50 | 12:00 | Berawan — buka tab **Energi hibrida**, tungku menaikkan daya |
 | 01:15 | 14:00 | Hujan — suhu rak tetap di setpoint berkat biomassa |
 | 02:05 | 18:00 | Matahari terbenam — beban ditopang baterai |
@@ -818,11 +819,11 @@ def latar_cuaca(df):
 # ==============================================================================
 # TAB
 # ==============================================================================
-tab_dash, tab_energi, tab_emisi, tab_hmi, tab_log, tab_spek = st.tabs([
+tab_hmi, tab_dash, tab_energi, tab_emisi, tab_log, tab_spek = st.tabs([
+    "Diagram alir proses (HMI)",
     "Panel operasional",
     "Energi hibrida",
     "Emisi & kualitas udara",
-    "Diagram alir proses (HMI)",
     "Log & ekspor data",
     "Spesifikasi & RAB",
 ])
