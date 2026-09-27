@@ -1,5 +1,5 @@
 """
-SI-PADI - Panel Monitoring & Kendali Pengering Gabah Hibrida Surya–Biomassa (demo 5 menit)
+SI-PADI — Panel Monitoring & Kendali Pengering Gabah Hibrida Surya–Biomassa (demo 5 menit)
 
 Jalankan:   streamlit run app.py
 Kebutuhan:  streamlit >= 1.50 (st.fragment, parameter width), pandas, altair
@@ -322,7 +322,18 @@ def langkah(s, dt, kendali):
         d["rh"] += (min(96.0, rh_target) - d["rh"]) * min(1.0, dt / 0.2)
 
         if d["status"] == "Selesai":
-            d["laju"] = 0.0
+            if not s["selesai"] and d["ka_db"] > target_db + 1e-6:
+                # target diturunkan saat batch masih berjalan: rak dikeringkan lagi
+                d["status"], d["jam_selesai"] = "Proses", None
+                catat(s, "Info", f"Target diturunkan — {NAMA_ZONA[z]} dikeringkan kembali")
+            else:
+                d["laju"] = 0.0
+                continue
+        if d["ka_db"] <= target_db:
+            # target dinaikkan melewati KA rak saat ini: selesai tanpa mengubah KA
+            d["status"], d["jam_selesai"], d["laju"] = "Selesai", s["jam"], 0.0
+            catat(s, "Sukses", f"{NAMA_ZONA[z]} sudah di bawah target baru "
+                               f"{kendali['target_ka']:.1f} % — siap dibongkar".replace(".", ","))
             continue
         semua_selesai = False
         me = ka_setimbang_db(d["rh"], d["suhu"])
@@ -331,17 +342,18 @@ def langkah(s, dt, kendali):
         wb_lama = db_ke_wb(d["ka_db"])
         if d["ka_db"] > me:
             d["ka_db"] = me + (d["ka_db"] - me) * math.exp(-k * dt)
-        d["laju"] = (wb_lama - db_ke_wb(d["ka_db"])) / dt
         if d["ka_db"] <= target_db:
             d["ka_db"] = target_db
             d["status"] = "Selesai"
             d["jam_selesai"] = s["jam"] + dt
             catat(s, "Sukses", f"{NAMA_ZONA[z]} mencapai {kendali['target_ka']:.1f} % — siap dibongkar".replace(".", ","))
+        d["laju"] = (wb_lama - db_ke_wb(d["ka_db"])) / dt
 
     # ---- Akhir batch --------------------------------------------------------
+    semua_selesai = all(s["zona"][z]["status"] == "Selesai" for z in ZONA)
     if semua_selesai and not s["selesai"]:
         s["selesai"] = True
-        s["jam_selesai_batch"] = s["jam"]
+        s["jam_selesai_batch"] = s["jam"] + dt
         s["fase_akhir"] = "pendinginan"
         catat(s, "Sukses", "Seluruh rak memenuhi target — tungku dimatikan, blower pendinginan 30 menit")
     if s["fase_akhir"] == "pendinginan" and s["jam"] - s["jam_selesai_batch"] >= 0.5:
@@ -613,13 +625,14 @@ def detik_demo():
 
 
 def kendali():
+    ss = st.session_state
     return {
-        "mode": "otomatis" if st.session_state.k_mode.startswith("Otomatis") else "manual",
-        "setpoint": float(st.session_state.k_sp),
-        "target_ka": float(st.session_state.k_target),
-        "blower_manual": bool(st.session_state.k_blower),
-        "pemanas_manual": bool(st.session_state.k_pemanas),
-        "pilihan_cuaca": PILIHAN_CUACA[st.session_state.k_cuaca],
+        "mode": "otomatis" if str(ss.get("k_mode", "Otomatis")).startswith("Otomatis") else "manual",
+        "setpoint": float(ss.get("k_sp", 45)),
+        "target_ka": float(ss.get("k_target", 14.0)),
+        "blower_manual": bool(ss.get("k_blower", True)),
+        "pemanas_manual": bool(ss.get("k_pemanas", True)),
+        "pilihan_cuaca": PILIHAN_CUACA.get(ss.get("k_cuaca"), "skenario"),
     }
 
 
@@ -912,6 +925,7 @@ with tab_dash:
                 st.slider("Setpoint suhu udara pengering (°C)", 38, 55, key="k_sp",
                           help=f"Alarm muncul bila suhu rak > {T_MAKS_GABAH:.0f} °C (risiko gabah retak).")
                 st.slider("Target kadar air akhir (% bb)", 12.0, 15.0, step=0.5, key="k_target", format="%.1f",
+                          disabled=s["selesai"],
                           help="Gabah kering giling umumnya ≤ 14 %.")
                 if k["mode"] == "manual":
                     t1, t2 = st.columns(2)
@@ -1238,6 +1252,7 @@ with tab_log:
 
         st.markdown("##### Log kejadian")
         log = pd.DataFrame(s["log"][::-1])
+        log["Jam proses"] = log["Jam proses"].map(lambda x: f1(x, 2))
         st.dataframe(log, hide_index=True, width="stretch", height=300)
 
         df = df_riwayat()
