@@ -160,41 +160,37 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. INISIALISASI SESI SIMULASI 5 MENIT
+# 2. INISIALISASI SESI: 1 UNIT PENGERING 1 TON (3 ZONA RAK)
 # ==============================================================================
 if 'initialized' not in st.session_state:
     st.session_state.detik_berjalan = 0
     st.session_state.cuaca = "☀️ Surya Penuh (Suplai PLTS Penuh)"
     st.session_state.mode_operasi = "Otomatis (Closed-Loop PID)"
     st.session_state.auto_play = False
-    st.session_state.bak_data = {
-        "Bak 1": {
+    st.session_state.blower_induk = True
+    st.session_state.pemanas_induk = True
+    st.session_state.target_ka_global = 14.0
+    st.session_state.target_suhu_global = 42
+
+    st.session_state.zona_data = {
+        "Zona 1 (Rak Atas)": {
             "suhu": 40.7,
             "target_suhu": 42,
             "ka": 25.7,
-            "target_ka": 14.0,
-            "blower": True,
-            "pemanas": True,
             "status": "Proses",
             "history": [{"Menit": 0, "Suhu": 40.7, "Kadar Air": 25.7}]
         },
-        "Bak 2": {
+        "Zona 2 (Rak Tengah)": {
             "suhu": 45.1,
             "target_suhu": 45,
             "ka": 17.9,
-            "target_ka": 14.0,
-            "blower": True,
-            "pemanas": True,
             "status": "Proses",
             "history": [{"Menit": 0, "Suhu": 45.1, "Kadar Air": 17.9}]
         },
-        "Bak 3": {
+        "Zona 3 (Rak Bawah)": {
             "suhu": 41.3,
             "target_suhu": 40,
             "ka": 26.4,
-            "target_ka": 14.0,
-            "blower": True,
-            "pemanas": True,
             "status": "Proses",
             "history": [{"Menit": 0, "Suhu": 41.3, "Kadar Air": 26.4}]
         }
@@ -202,17 +198,15 @@ if 'initialized' not in st.session_state:
     st.session_state.initialized = True
 
 # ==============================================================================
-# 3. SIDEBAR SIMULASI OTOMATIS 5 MENIT
+# 3. SIDEBAR SIMULASI DINAMIKA SISTEM
 # ==============================================================================
-st.sidebar.markdown("### ⏱️ Simulasi Demo Presentasi (5 Menit)")
-st.sidebar.caption("Siklus otomatis bergerak real-time selama presentasi")
+st.sidebar.markdown("### 🎛️ Konsol Demo 5 Menit")
+st.sidebar.caption("Simulasi 5 menit setara siklus pengeringan 1 ton 24 jam")
 
-# Saklar Auto Play 5 Menit
 auto_toggle = st.sidebar.toggle("▶️ Jalankan Simulasi Otomatis", value=st.session_state.auto_play)
 st.session_state.auto_play = auto_toggle
 
-# Progress Bar 5 Menit
-detik_maks = 300  # 5 Menit = 300 Detik
+detik_maks = 300  # 5 Menit
 prog = min(1.0, st.session_state.detik_berjalan / detik_maks)
 st.sidebar.progress(prog, text=f"Waktu Presentasi: {st.session_state.detik_berjalan // 60:02d}:{st.session_state.detik_berjalan % 60:02d} / 05:00")
 
@@ -226,7 +220,7 @@ with col_btn_b:
         st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⛅ Sumber Pasokan Energi")
+st.sidebar.markdown("### ⛅ Sumber Pasokan Energi Primer")
 pilihan_cuaca = st.sidebar.selectbox(
     "Status Radiasi PLTS:",
     [
@@ -237,36 +231,30 @@ pilihan_cuaca = st.sidebar.selectbox(
 )
 st.session_state.cuaca = pilihan_cuaca
 
-# Logika Matematis Penurunan Kadar Air Selama 5 Menit (300 Detik)
-def update_kondisi(dt_detik):
-    for b_nama, bak in st.session_state.bak_data.items():
-        if bak["status"] == "Selesai":
+def update_kondisi_zona(dt_detik):
+    for z_nama, z in st.session_state.zona_data.items():
+        if z["status"] == "Selesai":
             continue
         
-        # Laju penurunan agar tuntas dalam rentang 1.5 - 4.5 menit
-        if b_nama == "Bak 2":
-            # Bak 2 mulai 17.9%, turun ke 14% dalam 90 detik
+        if "Rak Tengah" in z_nama:
             laju = (3.9 / 90) * dt_detik
-        elif b_nama == "Bak 1":
-            # Bak 1 mulai 25.7%, turun ke 14% dalam 210 detik
+        elif "Rak Atas" in z_nama:
             laju = (11.7 / 210) * dt_detik
         else:
-            # Bak 3 mulai 26.4%, turun ke 14% dalam 270 detik
             laju = (12.4 / 270) * dt_detik
 
-        if bak["blower"] and bak["pemanas"]:
-            bak["ka"] = max(float(bak["target_ka"]), round(bak["ka"] - laju, 1))
+        if st.session_state.blower_induk and st.session_state.pemanas_induk:
+            z["ka"] = max(float(st.session_state.target_ka_global), round(z["ka"] - laju, 1))
         
-        if bak["ka"] <= bak["target_ka"]:
-            bak["status"] = "Selesai"
+        if z["ka"] <= st.session_state.target_ka_global:
+            z["status"] = "Selesai"
 
-        # Variasi suhu mikro
-        bak["suhu"] = round(bak["target_suhu"] + np.random.uniform(-0.4, 0.4), 1)
+        z["suhu"] = round(z["target_suhu"] + np.random.uniform(-0.4, 0.4), 1)
 
-        bak["history"].append({
+        z["history"].append({
             "Menit": round(st.session_state.detik_berjalan / 60, 1),
-            "Suhu": bak["suhu"],
-            "Kadar Air": bak["ka"]
+            "Suhu": z["suhu"],
+            "Kadar Air": z["ka"]
         })
 
 # ==============================================================================
@@ -277,21 +265,20 @@ st.markdown(f"""
 <div class="top-navbar">
     <div>
         <div class="navbar-title">🌾 SI-PADI — Panel Monitoring Pengering Gabah Padi</div>
-        <div class="navbar-sub">Konfigurasi Pengering 3 Bak Datar Aktif · Telemetri Terintegrasi IoT · PUSAKA BLORA</div>
+        <div class="navbar-sub">Unit Pengering Tunggal Kapasitas 1 Ton · 3 Zona Sensor Rak Vertikal · Mitra: PUSAKA BLORA</div>
     </div>
     <div style="display:flex; align-items:center; gap:14px;">
         <span style="font-size:12px; color:{'#3fb950' if st.session_state.auto_play else '#d19a38'}; font-weight:600;">
-            {'● DEMO AUTO-RUN BERJALAN' if st.session_state.auto_play else '⏸️ SIMULASI SIAP'}
+            {'● DEMO AUTO-RUN AKTIF' if st.session_state.auto_play else '⏸️ SIMULASI STANDBY'}
         </span>
         <div class="clock-badge">{waktu_server} WIB</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Kalkulasi Metrik
-list_ka = [b["ka"] for b in st.session_state.bak_data.values()]
+list_ka = [z["ka"] for z in st.session_state.zona_data.values()]
 rata_ka = round(sum(list_ka) / len(list_ka), 1)
-total_selesai = sum(1 for b in st.session_state.bak_data.values() if b["status"] == "Selesai")
+total_selesai = sum(1 for z in st.session_state.zona_data.values() if z["status"] == "Selesai")
 
 sisa_detik = max(0, detik_maks - st.session_state.detik_berjalan)
 est_menit_demo = sisa_detik // 60
@@ -301,7 +288,7 @@ est_detik_demo = sisa_detik % 60
 # 5. TAB NAVIGASI SISTEM
 # ==============================================================================
 tab_dashboard, tab_hmi, tab_spek = st.tabs([
-    "📊 Panel Operasional 3 Bak Datar", 
+    "📊 Panel Operasional 1 Unit (3 Zona Rak)", 
     "🔄 Diagram Alir Sistem (3D Isometrik HMI)", 
     "📑 Spesifikasi Desain & Rencana Anggaran (RAB)"
 ])
@@ -314,27 +301,27 @@ with tab_dashboard:
     with col_kpi1:
         st.markdown(f"""
         <div class="summary-card">
-            <div class="summary-title">Rata-Rata Kadar Air Seluruh Bak</div>
+            <div class="summary-title">Rata-Rata Kadar Air Batch 1 Ton</div>
             <div class="summary-metric">{rata_ka:.1f} <span class="summary-unit">%</span></div>
-            <div class="summary-subtext">Standar Target Akhir SNI 6128:2020: 14.0%</div>
+            <div class="summary-subtext">Standar Target Akhir SNI 6128:2020: {st.session_state.target_ka_global:.1f}%</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col_kpi2:
         st.markdown(f"""
         <div class="summary-card">
-            <div class="summary-title">Status Batch Operasional</div>
-            <div class="summary-metric">{total_selesai} <span class="summary-unit">/ 3 Selesai</span></div>
-            <div class="summary-subtext">{"Semua unit bak dalam siklus aktif" if total_selesai < 3 else "Seluruh muatan gabah telah memenuhi ambang simpan"}</div>
+            <div class="summary-title">Keseragaman Dehidrasi Rak</div>
+            <div class="summary-metric">{total_selesai} <span class="summary-unit">/ 3 Zona Selesai</span></div>
+            <div class="summary-subtext">{"Proses dehidrasi berlangsung merata" if total_selesai < 3 else "Seluruh lapisan muatan telah memenuhi standar simpan"}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col_kpi3:
         st.markdown(f"""
         <div class="summary-card">
-            <div class="summary-title">Estimasi Sisa Waktu Siklus Demo</div>
-            <div class="summary-metric">{est_menit_demo:02d} <span class="summary-unit">menit</span> {est_detik_demo:02d} <span class="summary-unit">detik</span></div>
-            <div class="summary-subtext">Simulasi komputasi 5 menit setara pengeringan 24 jam</div>
+            <div class="summary-title">Estimasi Sisa Durasi Siklus</div>
+            <div class="summary-metric">{est_menit_demo:02d} <span class="summary-unit">mnt</span> {est_detik_demo:02d} <span class="summary-unit">dtk</span></div>
+            <div class="summary-subtext">Waktu demo real-time 5 menit setara pengeringan 24 jam</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -343,50 +330,54 @@ with tab_dashboard:
     col_workspace_l, col_workspace_r = st.columns([2.2, 1.0])
 
     with col_workspace_l:
-        st.markdown("##### Status Telemetri Real-Time Tiap Unit Pengering")
-        bak_fokus = st.radio(
-            "Pilih Unit untuk Fokus Analitik & Pengaturan Aktuator:",
-            ["Bak 1", "Bak 2", "Bak 3"],
+        st.markdown("##### Telemetri 3 Titik Sensor Rak Gabah (1 Unit Ruang Pengering)")
+        zona_fokus = st.radio(
+            "Pilih Titik Ketinggian Rak untuk Analitik & Monitoring Grafik:",
+            ["Zona 1 (Rak Atas)", "Zona 2 (Rak Tengah)", "Zona 3 (Rak Bawah)"],
             horizontal=True
         )
 
-        col_b1, col_b2, col_b3 = st.columns(3)
-        slot_kolom = {"Bak 1": col_b1, "Bak 2": col_b2, "Bak 3": col_b3}
+        col_z1, col_z2, col_z3 = st.columns(3)
+        slot_kolom = {
+            "Zona 1 (Rak Atas)": col_z1, 
+            "Zona 2 (Rak Tengah)": col_z2, 
+            "Zona 3 (Rak Bawah)": col_z3
+        }
 
-        for nama_bak, slot in slot_kolom.items():
-            dt_bak = st.session_state.bak_data[nama_bak]
-            badge_tipe = "status-pill-done" if dt_bak["status"] == "Selesai" else "status-pill-active"
-            border_fokus = "border: 1.5px solid #d19a38; box-shadow: 0 0 10px rgba(209,154,56,0.25);" if nama_bak == bak_fokus else ""
+        for nama_z, slot in slot_kolom.items():
+            dt_z = st.session_state.zona_data[nama_z]
+            badge_tipe = "status-pill-done" if dt_z["status"] == "Selesai" else "status-pill-active"
+            border_fokus = "border: 1.5px solid #d19a38; box-shadow: 0 0 10px rgba(209,154,56,0.25);" if nama_z == zona_fokus else ""
 
             with slot:
                 st.markdown(f"""
                 <div class="chamber-card" style="{border_fokus}">
                     <div class="chamber-header">
-                        <span class="chamber-name">{nama_bak}</span>
-                        <span class="{badge_tipe}">{dt_bak["status"]}</span>
+                        <span class="chamber-name">{nama_z}</span>
+                        <span class="{badge_tipe}">{dt_z["status"]}</span>
                     </div>
                     <div class="param-row">
-                        <span>Suhu Udara Masuk:</span>
-                        <span class="param-val">{dt_bak['suhu']:.1f} °C</span>
+                        <span>Suhu Termal Terukur:</span>
+                        <span class="param-val">{dt_z['suhu']:.1f} °C</span>
                     </div>
                     <div class="param-row">
                         <span>Target Setpoint:</span>
-                        <span>{dt_bak['target_suhu']} °C</span>
+                        <span>{dt_z['target_suhu']} °C</span>
                     </div>
                     <div class="param-row" style="margin-top:4px;">
                         <span>Kadar Air Aktual:</span>
-                        <span class="param-val" style="color:{'#3fb950' if dt_bak['status'] == 'Selesai' else '#d19a38'};">{dt_bak['ka']:.1f} %</span>
+                        <span class="param-val" style="color:{'#3fb950' if dt_z['status'] == 'Selesai' else '#d19a38'};">{dt_z['ka']:.1f} %</span>
                     </div>
                     <div class="param-row">
                         <span>Batas Aman SNI:</span>
-                        <span>{dt_bak['target_ka']:.1f} %</span>
+                        <span>{st.session_state.target_ka_global:.1f} %</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:8px; border-top:1px solid #1f2431; font-size:11px;">
-                        <span style="color:{'#3fb950' if dt_bak['blower'] else '#697184'}; font-weight:600;">
-                            🌀 BLOWER: {'ON' if dt_bak['blower'] else 'OFF'}
+                        <span style="color:{'#3fb950' if st.session_state.blower_induk else '#697184'}; font-weight:600;">
+                            🌀 BLOWER: {'ON' if st.session_state.blower_induk else 'OFF'}
                         </span>
-                        <span style="color:{'#e5a43b' if dt_bak['pemanas'] else '#697184'}; font-weight:600;">
-                            🔥 PEMANAS: {'ON' if dt_bak['pemanas'] else 'OFF'}
+                        <span style="color:{'#e5a43b' if st.session_state.pemanas_induk else '#697184'}; font-weight:600;">
+                            🔥 PEMANAS: {'ON' if st.session_state.pemanas_induk else 'OFF'}
                         </span>
                     </div>
                 </div>
@@ -394,79 +385,77 @@ with tab_dashboard:
 
         st.markdown("<div style='margin-bottom: 18px;'></div>", unsafe_allow_html=True)
 
-        bak_aktif = st.session_state.bak_data[bak_fokus]
+        zona_aktif = st.session_state.zona_data[zona_fokus]
         st.markdown(f"""
         <div class="summary-card" style="margin-bottom: 10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <span style="font-size:15px; font-weight:700; color:#f1f3f7;">Grafik Dinamika Kinetika — {bak_fokus}</span>
-                    <div style="font-size:12px; color:#8890a1; margin-top:2px;">Korelasi Suhu Termal (°C) terhadap Dehidrasi Kadar Air (%)</div>
+                    <span style="font-size:15px; font-weight:700; color:#f1f3f7;">Grafik Dinamika Kinetika — {zona_fokus}</span>
+                    <div style="font-size:12px; color:#8890a1; margin-top:2px;">Profil Suhu Termal (°C) terhadap Dehidrasi Kadar Air (%) Gabah 1 Ton</div>
                 </div>
                 <div style="text-align:right;">
-                    <div style="font-size:11px; color:#8890a1;">Waktu Simulasi Berjalan</div>
+                    <div style="font-size:11px; color:#8890a1;">Durasi Simulasi</div>
                     <div style="font-size:18px; font-weight:700; color:#f1f3f7;">{st.session_state.detik_berjalan // 60:02d}:{st.session_state.detik_berjalan % 60:02d} <span style="font-size:12px; font-weight:normal; color:#8890a1;">Menit</span></div>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        df_telemetri = pd.DataFrame(bak_aktif["history"]).set_index("Menit")
+        df_telemetri = pd.DataFrame(zona_aktif["history"]).set_index("Menit")
         st.line_chart(df_telemetri[["Suhu", "Kadar Air"]], color=["#d19a38", "#3fb950"])
 
     with col_workspace_r:
         st.markdown(f"""
         <div class="control-panel-box">
-            <div class="control-panel-heading">Pengaturan Parameter — {bak_fokus}</div>
+            <div class="control-panel-heading">Pusat Kendali Unit 1 Ton</div>
         """, unsafe_allow_html=True)
 
-        sp_ka = st.slider(
-            "Batas Akhir Kadar Air (SNI %):", 
+        st.session_state.target_ka_global = st.slider(
+            "Target Akhir Kadar Air (SNI %):", 
             min_value=11.0, 
             max_value=16.0, 
-            value=float(bak_aktif["target_ka"]), 
+            value=float(st.session_state.target_ka_global), 
             step=0.5
         )
-        sp_suhu = st.slider(
-            "Suhu Udara Pengering Target (°C):", 
+        st.session_state.target_suhu_global = st.slider(
+            "Setpoint Suhu Ruang Pengering (°C):", 
             min_value=35, 
             max_value=60, 
-            value=int(bak_aktif["target_suhu"]), 
+            value=int(st.session_state.target_suhu_global), 
             step=1
         )
-        bak_aktif["target_ka"] = sp_ka
-        bak_aktif["target_suhu"] = sp_suhu
 
-        st.markdown("<div style='font-size:12px; font-weight:600; color:#8890a1; margin-top:14px; margin-bottom:8px;'>Kendali Aktuator Mandiri:</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:12px; font-weight:600; color:#8890a1; margin-top:14px; margin-bottom:8px;'>Kendali Aktuator Induk (1 Unit):</div>", unsafe_allow_html=True)
         col_sw1, col_sw2 = st.columns(2)
         with col_sw1:
-            bak_aktif["blower"] = st.toggle("Blower Udara", value=bak_aktif["blower"])
+            st.session_state.blower_induk = st.toggle("Blower Udara", value=st.session_state.blower_induk)
         with col_sw2:
-            bak_aktif["pemanas"] = st.toggle("Elemen Pemanas", value=bak_aktif["pemanas"])
+            st.session_state.pemanas_induk = st.toggle("Elemen Pemanas", value=st.session_state.pemanas_induk)
 
         mode_terpilih = st.selectbox("Algoritma Pengendalian:", ["Otomatis (Closed-Loop PID)", "Manual Override System"])
         st.session_state.mode_operasi = mode_terpilih
 
         st.markdown(f"""
             <div style="font-size:12px; color:#8890a1; margin-top:14px; padding-top:10px; border-top:1px solid #202534;">
-                Status Kontrol: <strong style="color:#d19a38;">{mode_terpilih.split()[0]}</strong>
+                Status Operasi: <strong style="color:#d19a38;">{mode_terpilih.split()[0]}</strong>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.download_button(
-            label="📥 Ekspor Data Log Siklus (.CSV)",
+            label="📥 Ekspor Data Log Batch 1 Ton (.CSV)",
             data=df_telemetri.to_csv().encode('utf-8'),
-            file_name=f"log_kinetika_{bak_fokus.replace(' ', '_').lower()}.csv",
+            file_name=f"log_batch_1ton_sipadi.csv",
             mime="text/csv",
             use_container_width=True
         )
 
 # ------------------------------------------------------------------------------
-# TAB 2: HMI DIGITAL TWIN
+# TAB 2: HMI DIGITAL TWIN (1 UNIT RUMAH PENGERING - 3 TINGKAT RAK)
 # ------------------------------------------------------------------------------
 with tab_hmi:
     st.markdown("### 🗺️ Skema Integrasi Termal & Pembangkit EBT SI-PADI")
-    st.caption("Visualisasi Terpadu Stasiun Bioenergi, Menara Penukar Panas (HE), Ruang Rak Pengering, dan Array PLTS 4.000 Wp")
+    st.caption("Visualisasi Terpadu Stasiun Bioenergi, Menara Penukar Panas (HE), 1 Unit Rumah Pengering Rak Bertingkat, dan PLTS 4.000 Wp[span_1](start_span)[span_1](end_span)")
 
     if "Surya" in st.session_state.cuaca:
         suplai_plts_wp = 3920
@@ -481,9 +470,9 @@ with tab_hmi:
         status_baterai = 54.0
         suhu_ruang_bakar = 460
 
-    ka_b1 = st.session_state.bak_data["Bak 1"]["ka"]
-    ka_b2 = st.session_state.bak_data["Bak 2"]["ka"]
-    ka_b3 = st.session_state.bak_data["Bak 3"]["ka"]
+    ka_z1 = st.session_state.zona_data["Zona 1 (Rak Atas)"]["ka"]
+    ka_z2 = st.session_state.zona_data["Zona 2 (Rak Tengah)"]["ka"]
+    ka_z3 = st.session_state.zona_data["Zona 3 (Rak Bawah)"]["ka"]
 
     svg_hmi_industrial = f"""
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 560" width="100%" height="100%" style="background-color: #12141c; border-radius: 10px; border: 1px solid #232838; font-family: -apple-system, sans-serif;">
@@ -543,25 +532,26 @@ with tab_hmi:
 
       <path d="M 465 270 L 510 270" stroke="#d19a38" stroke-width="3.5" fill="none" marker-end="url(#arrow-amber)"/>
 
-      <!-- Rumah Pengering 3 Bak -->
+      <!-- 1 UNIT RUMAH PENGERING GABAH (3 TINGKAT RAK) -->
       <rect x="510" y="110" width="160" height="380" rx="6" fill="#1a1c24" stroke="#d19a38" stroke-width="2"/>
       <text x="590" y="138" fill="#d19a38" font-size="11" font-weight="700" text-anchor="middle">RUMAH PENGERING</text>
-      <text x="590" y="155" fill="#8890a1" font-size="9" text-anchor="middle">Sistem 3 Bak Datar</text>
+      <text x="590" y="155" fill="#8890a1" font-size="9" text-anchor="middle">1 Unit (Dimensi 6x4x3m)</text>
       
+      <!-- 3 Tingkat Rak Sensor -->
       <rect x="525" y="175" width="130" height="50" rx="4" fill="#0f1015" stroke="#333a4d"/>
-      <text x="590" y="195" fill="#e2e4e9" font-size="11" font-weight="600" text-anchor="middle">Bak 1</text>
-      <text x="590" y="213" fill="#d19a38" font-size="11" font-weight="700" text-anchor="middle">KA: {ka_b1:.1f}%</text>
+      <text x="590" y="195" fill="#e2e4e9" font-size="10.5" font-weight="600" text-anchor="middle">Rak Atas (Zona 1)</text>
+      <text x="590" y="213" fill="#d19a38" font-size="10.5" font-weight="700" text-anchor="middle">KA: {ka_z1:.1f}%</text>
 
       <rect x="525" y="235" width="130" height="50" rx="4" fill="#0f1015" stroke="#333a4d"/>
-      <text x="590" y="255" fill="#e2e4e9" font-size="11" font-weight="600" text-anchor="middle">Bak 2</text>
-      <text x="590" y="273" fill="#d19a38" font-size="11" font-weight="700" text-anchor="middle">KA: {ka_b2:.1f}%</text>
+      <text x="590" y="255" fill="#e2e4e9" font-size="10.5" font-weight="600" text-anchor="middle">Rak Tengah (Zona 2)</text>
+      <text x="590" y="273" fill="#d19a38" font-size="10.5" font-weight="700" text-anchor="middle">KA: {ka_z2:.1f}%</text>
 
       <rect x="525" y="295" width="130" height="50" rx="4" fill="#0f1015" stroke="#333a4d"/>
-      <text x="590" y="315" fill="#e2e4e9" font-size="11" font-weight="600" text-anchor="middle">Bak 3</text>
-      <text x="590" y="333" fill="#d19a38" font-size="11" font-weight="700" text-anchor="middle">KA: {ka_b3:.1f}%</text>
+      <text x="590" y="315" fill="#e2e4e9" font-size="10.5" font-weight="600" text-anchor="middle">Rak Bawah (Zona 3)</text>
+      <text x="590" y="333" fill="#d19a38" font-size="10.5" font-weight="700" text-anchor="middle">KA: {ka_z3:.1f}%</text>
 
       <text x="590" y="380" fill="#3fb950" font-size="10" font-weight="600" text-anchor="middle">Blower Udara Aktif</text>
-      <text x="590" y="405" fill="#8890a1" font-size="9" text-anchor="middle">Kapasitas Total:</text>
+      <text x="590" y="405" fill="#8890a1" font-size="9" text-anchor="middle">Kapasitas Batch Tunggal:</text>
       <text x="590" y="420" fill="#e2e4e9" font-size="10" font-weight="600" text-anchor="middle">1 Ton / Siklus</text>
 
       <!-- 2. SISTEM SURYA PLTS -->
@@ -599,27 +589,27 @@ with tab_hmi:
 # ------------------------------------------------------------------------------
 with tab_spek:
     st.markdown("### 📋 Spesifikasi Keteknikan & Rencana Anggaran Biaya Revisi")
-    st.caption("Diselaraskan Penuh dengan Draf Final Usulan PFsains Pertamina Foundation 2026")
+    st.caption("Diselaraskan Penuh dengan Draf Final Usulan PFsains Pertamina Foundation 2026[span_2](start_span)[span_2](end_span)")
 
     col_spec_a, col_spec_b = st.columns(2)
     with col_spec_a:
         st.markdown("""
-        **Parameter Teknis Unit SI-PADI:**[cite: 1]
-        * **Konfigurasi Unit:** Rumah Pengering Hibrida 3 Bak Datar Aktif (*Flat-Bed Dryers*).[cite: 1]
-        * **Dimensi Fasilitas:** ±6 m × 4 m × 3 m berangka baja galvanis dengan insulasi polikarbonat.[cite: 1]
-        * **Kapasitas Olah:** ±1 Ton gabah segar per siklus pengeringan (18–24 jam).[cite: 1]
-        * **Profil Kadar Air:** Diturunkan dari 27,72% (basis basah) menjadi ≤ 14,0% (Standar SNI 6128:2020).[cite: 1]
-        * **Sumber Daya:** Array PLTS 4.000 Wp baterai penyimpanan & tungku biomassa batang padi.[cite: 1]
-        * **Tingkat Kesiapan Teknologi:** TKT level 6–7 (teruji operasional lapangan).[cite: 1]
+        **Parameter Teknis Unit SI-PADI:**[span_3](start_span)[span_3](end_span)
+        * **Konfigurasi Unit:** 1 Unit Rumah Pengering Hibrida Tunggal (Dimensi ±6 m × 4 m × 3 m) berangka baja galvanis dengan insulasi polikarbonat[span_4](start_span)[span_4](end_span).
+        * **Sistem Rak Pemantauan:** 3 Tingkat Rak Stainless Steel (Zona Atas, Tengah, dan Bawah) untuk menjamin keseragaman dehidrasi gabah[span_5](start_span)[span_5](end_span).
+        * **Kapasitas Olah:** ±1 Ton gabah segar per siklus pengeringan (18–24 jam)[span_6](start_span)[span_6](end_span).
+        * **Profil Kadar Air:** Diturunkan dari 27,72% (basis basah) menjadi ≤ 14,0% (Standar SNI 6128:2020)[span_7](start_span)[span_7](end_span).
+        * **Sumber Daya:** Array PLTS 4.000 Wp baterai penyimpanan & tungku biomassa batang padi[span_8](start_span)[span_8](end_span).
+        * **Tingkat Kesiapan Teknologi:** TKT level 6–7 (teruji operasional lapangan)[span_9](start_span)[span_9](end_span).
         """)
 
     with col_spec_b:
         st.markdown("""
-        **Ringkasan Anggaran & Lokasi Proyek:**[cite: 1]
-        * **Total Rencana Anggaran Biaya (RAB):** **Rp 220.000.000,-** *(maksimal Rp 250 juta)*.[cite: 1]
-        * **Alokasi Investasi Pokok:** Konstruksi rumah pengering galvanis, tungku biomassa cor beton, pipa stainless steel, blower induksi, filter ganda (HEPA & Coarse), dan modul sensor IoT.[cite: 1]
-        * **Mitra Sasaran & Lokasi:** Sentra Pertanian Terpadu Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora.[cite: 1]
-        * **Mitra Kolaborasi:** PT Pertamina EP Cepu Field Cepu.[cite: 1]
+        **Ringkasan Anggaran & Lokasi Proyek:**[span_10](start_span)[span_10](end_span)
+        * **Total Rencana Anggaran Biaya (RAB):** **Rp 220.000.000,-** *(maksimal Rp 250 juta)*[span_11](start_span)[span_11](end_span).
+        * **Alokasi Investasi Pokok:** 1 Unit Rumah pengering galvanis (Rp 15 juta), tungku biomassa cor beton (Rp 15 juta), pipa stainless steel, blower induksi, filter ganda (HEPA & Coarse), dan modul sensor IoT[span_12](start_span)[span_12](end_span).
+        * **Mitra Sasaran & Lokasi:** Sentra Pertanian Terpadu Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora[span_13](start_span)[span_13](end_span).
+        * **Mitra Kolaborasi:** PT Pertamina EP Cepu Field Cepu[span_14](start_span)[span_14](end_span).
         """)
 
 # ==============================================================================
@@ -628,10 +618,10 @@ with tab_spek:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #697184; font-size: 12px; line-height: 1.6;">
-    <strong>SI-PADI: Pengering Padi Surya Terintegrasi IoT</strong><br>
-    Kompetisi Inovasi Teknologi dan Energi — Program PFsains Pertamina Foundation 2026<br>
-    <strong>Tim Pengusul:</strong> Prof. Dr. Ir. Widayat, S.T., M.T., IPM., ASEAN Eng. (Ketua · Undip) · Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T.<br>
-    Pusat Organik PUSAKA BLORA · PT Pertamina EP Cepu Field Cepu
+    <strong>SI-PADI: Pengering Padi Surya Terintegrasi IoT</strong>[span_15](start_span)[span_15](end_span)<br>
+    Kompetisi Inovasi Teknologi dan Energi — Program PFsains Pertamina Foundation 2026[span_16](start_span)[span_16](end_span)<br>
+    <strong>Tim Pengusul:</strong> Prof. Dr. Ir. Widayat, S.T., M.T., IPM., ASEAN Eng. (Ketua · Undip) · Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T.[span_17](start_span)[span_17](end_span)<br>
+    Pusat Organik PUSAKA BLORA · PT Pertamina EP Cepu Field Cepu[span_18](start_span)[span_18](end_span)
 </div>
 """, unsafe_allow_html=True)
 
@@ -639,7 +629,7 @@ st.markdown("""
 # 7. ENGINE AUTO-PLAY LOOP (BERJALAN TIAP 3 DETIK SELAMA PRESENTASI)
 # ==============================================================================
 if st.session_state.auto_play and st.session_state.detik_berjalan < detik_maks:
-    time.sleep(3)  # Interval pembaruan 3 detik
+    time.sleep(3)
     st.session_state.detik_berjalan = min(detik_maks, st.session_state.detik_berjalan + 5)
-    update_kondisi(5)
+    update_kondisi_zona(5)
     st.rerun()
