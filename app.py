@@ -1,10 +1,10 @@
 """
-SI-PADI — Panel Monitoring & Kendali Pengering Gabah Hibrida Surya–Biomassa (demo 5 menit)
+SI-PADI — Panel Monitoring & Kendali Pengering Gabah Hibrida Surya–Biomassa (demo 4 menit)
 
 Jalankan:   streamlit run app.py
 Kebutuhan:  streamlit >= 1.50 (st.fragment, parameter width), pandas, altair
 
-5 menit demo = 24 jam proses. Model dikalibrasi ke hasil uji di proposal:
+4 menit demo = 24 jam proses (10 detik = 1 jam). Model dikalibrasi ke hasil uji di proposal:
 KA 27,72 % bb -> 14 % bb dalam 18–24 jam untuk ±1 ton gabah per batch.
 """
 import time
@@ -22,9 +22,9 @@ import random
 #    Angka bertanda [ASUMSI] adalah asumsi desain untuk demo; tampilkan
 #    apa adanya bila juri bertanya.
 # ==============================================================================
-DEMO_DETIK = 300                 # 5 menit presentasi
+DEMO_DETIK = 240                 # 4 menit presentasi
 SIKLUS_JAM = 24.0                # [PROPOSAL] siklus pengeringan 18–24 jam
-JAM_PER_DETIK = SIKLUS_JAM / DEMO_DETIK   # 1 detik demo = 0,08 jam = 4,8 menit proses
+JAM_PER_DETIK = SIKLUS_JAM / DEMO_DETIK   # 1 detik demo = 0,1 jam = 6 menit proses; 10 detik = 1 jam
 JAM_MULAI = 8.0                  # [ASUMSI] batch dimuat pukul 08:00
 DT_JAM = 0.02                    # langkah integrasi model (±1,2 menit proses)
 REKAM_TIAP_JAM = 0.1             # resolusi log/grafik
@@ -676,7 +676,7 @@ def sinkron():
 # ==============================================================================
 with st.sidebar:
     st.markdown("### Konsol demo")
-    st.caption("5 menit demo = 24 jam proses. 1 detik = 4,8 menit proses.")
+    st.caption("4 menit demo = 24 jam proses. 10 detik = 1 jam, 1 detik = 6 menit.")
     kol1, kol2 = st.columns(2)
     with kol1:
         if st.session_state.berjalan:
@@ -710,20 +710,20 @@ with st.sidebar:
                       "17:30 cerah, lalu malam. Menunjukkan peralihan energi hibrida secara otomatis.")
 
     st.markdown("---")
-    with st.expander("Panduan presentasi 5 menit", expanded=False):
+    with st.expander("Panduan presentasi 4 menit", expanded=False):
         st.markdown("""
 | Demo | Jam proses | Yang ditunjukkan |
 |---|---|---|
 | 00:00 | 08:00 | Tekan **Mulai**. Tab **Diagram alir**: jelaskan alur tungku batang padi → filter → penukar panas hibrida → rumah pengering, dan PLTS → baterai → blower & IoT |
-| 00:40 | 11:12 | Pindah ke **Panel operasional**: KA awal 27,7 %, 3 zona rak, pusat kendali |
-| 00:50 | 12:00 | Berawan — buka tab **Energi hibrida**, tungku menaikkan daya |
-| 01:15 | 14:00 | Hujan — suhu rak tetap di setpoint berkat biomassa |
-| 02:05 | 18:00 | Matahari terbenam — beban ditopang baterai |
-| 03:36 | 01:16 | Rak Bawah mencapai 14 % |
-| 03:58 | 03:00 | Baterai < 30 % → mode hemat energi otomatis |
-| 04:10 | 04:00 | Rak Tengah mencapai 14 % |
-| 04:35 | 06:00 | Rak Atas selesai → tungku mati otomatis, pendinginan |
-| 04:42 | 06:30 | Tab **Log & ekspor**: ringkasan batch dan unduh CSV |
+| 00:30 | 11:00 | Pindah ke **Panel operasional**: KA awal 27,7 %, 3 zona rak, pusat kendali |
+| 00:40 | 12:00 | Berawan — buka tab **Energi hibrida**, tungku menaikkan daya |
+| 01:00 | 14:00 | Hujan — suhu rak tetap di setpoint berkat biomassa |
+| 01:40 | 18:00 | Matahari terbenam — beban ditopang baterai |
+| 02:52 | 01:16 | Rak Bawah mencapai 14 % (kembali ke **Panel operasional**) |
+| 03:10 | 03:02 | Baterai < 30 % → mode hemat energi otomatis |
+| 03:20 | 04:00 | Rak Tengah mencapai 14 % |
+| 03:40 | 06:01 | Rak Atas selesai → tungku mati otomatis, pendinginan |
+| 03:45 | 06:34 | Tab **Log & ekspor**: ringkasan batch dan unduh CSV |
 
 Uji interaktif (singkat, lalu kembalikan): setpoint 55 °C → alarm suhu rak; mode manual lalu matikan blower → interlock tungku.
 """)
@@ -754,7 +754,7 @@ def header():
         <div class="chip jam">Jam proses {f1(s['jam'])} / 24</div>
         <div class="chip">Pukul simulasi <b>{format_jam(jam_lokal)}</b></div>
         <div class="chip">Cuaca <b>{CUACA[s['cuaca']]['label'] if s['iradiasi'] > 0 else 'Malam'}</b></div>
-        <div class="chip">Demo <b>{int(d)//60:02d}:{int(d)%60:02d}</b> / 05:00</div>
+        <div class="chip">Demo <b>{int(d)//60:02d}:{int(d)%60:02d}</b> / {DEMO_DETIK // 60:02d}:{DEMO_DETIK % 60:02d}</div>
         <div class="chip">{datetime.now(WIB).strftime('%H:%M:%S')} WIB</div>
       </div>
     </div>
@@ -779,7 +779,7 @@ def gaya(ch, tinggi=250):
             .configure_view(strokeWidth=0))
 
 
-SUMBU_JAM = alt.X("jam:Q", title="Jam proses (5 menit demo = 24 jam)",
+SUMBU_JAM = alt.X("jam:Q", title="Jam proses (4 menit demo = 24 jam)",
                   scale=alt.Scale(domain=[0, 24]), axis=alt.Axis(values=list(range(0, 25, 2))))
 
 
@@ -1449,7 +1449,7 @@ with tab_spek:
     st.markdown("### Asumsi model simulasi demo")
     st.caption("Proposal tidak menyebut angka-angka berikut; nilainya dipakai hanya untuk simulasi demo.")
     st.table(pd.DataFrame([
-        ["Skala waktu", "5 menit demo = 24 jam proses (1 detik = 4,8 menit)"],
+        ["Skala waktu", "4 menit demo = 24 jam proses (10 detik = 1 jam, 1 detik = 6 menit)"],
         ["Jumlah titik sensor rak", "3 zona (rak atas, tengah, bawah) untuk memantau keseragaman pengeringan"],
         ["Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah), laju bergantung suhu & aliran udara; dikalibrasi ke hasil uji Bab 2.1"],
         ["Hasil kalibrasi", "Skenario standar: Rak Bawah ±17 jam, Rak Tengah ±20 jam, Rak Atas ±22 jam"],
