@@ -309,7 +309,7 @@ est_jam = estimasi_total_menit // 60
 est_mnt = estimasi_total_menit % 60
 
 # ==============================================================================
-# 5. TAB NAVIGASI SISTEM (DEFINISI TAB DIBUAT DI SINI)
+# 5. TAB NAVIGASI SISTEM
 # ==============================================================================
 tab_dashboard, tab_hmi, tab_spek = st.tabs([
     "📊 Panel Operasional 3 Bak Datar", 
@@ -477,7 +477,7 @@ with tab_dashboard:
 # ------------------------------------------------------------------------------
 with tab_hmi:
     st.markdown("### 🗺️ Skema Integrasi Termal & Pembangkit EBT SI-PADI")
-    st.caption("Visualisasi Terpadu Stasiun Bioenergi, Menara Penukar Panas (HE), Ruang Rak Pengering, dan Array PLTS 4.000 Wp[cite: 7]")
+    st.caption("Visualisasi Terpadu Stasiun Bioenergi, Menara Penukar Panas (HE), Ruang Rak Pengering, dan Array PLTS 4.000 Wp")
 
     if "Surya" in st.session_state.cuaca:
         suplai_plts_wp = 3920
@@ -619,27 +619,27 @@ with tab_hmi:
 # ------------------------------------------------------------------------------
 with tab_spek:
     st.markdown("### 📋 Spesifikasi Keteknikan & Rencana Anggaran Biaya Revisi")
-    st.caption("Diselaraskan Penuh dengan Draf Final Usulan PFsains Pertamina Foundation 2026[cite: 7]")
+    st.caption("Diselaraskan Penuh dengan Draf Final Usulan PFsains Pertamina Foundation 2026")
 
     col_spec_a, col_spec_b = st.columns(2)
     with col_spec_a:
         st.markdown("""
-        **Parameter Teknis Unit SI-PADI[cite: 7]:**
-        * **Konfigurasi Unit:** Rumah Pengering Hibrida 3 Bak Datar Aktif (*Flat-Bed Dryers*)[cite: 7].
-        * **Dimensi Fasilitas:** $\\pm 6\\text{ m} \\times 4\\text{ m} \\times 3\\text{ m}$ berangka baja galvanis dengan insulasi polikarbonat[cite: 7].
-        * **Kapasitas Olah:** $\\pm 1\\text{ Ton}$ gabah segar per siklus pengeringan (18–24 jam)[cite: 7].
-        * **Profil Kadar Air:** Diturunkan dari $27,72\\%$ (basis basah) menjadi $\\leq 14,0\\%$ (Standar SNI 6128:2020)[cite: 7].
-        * **Sumber Daya:** Array PLTS $4.000\\text{ Wp}$ baterai penyimpanan & tungku biomassa batang padi[cite: 7].
-        * **Tingkat Kesiapan Teknologi:** TKT level 6–7 (teruji operasional lapangan)[cite: 7].
+        **Parameter Teknis Unit SI-PADI:**
+        * **Konfigurasi Unit:** Rumah Pengering Hibrida 3 Bak Datar Aktif (*Flat-Bed Dryers*).
+        * **Dimensi Fasilitas:** ±6 m × 4 m × 3 m berangka baja galvanis dengan insulasi polikarbonat.
+        * **Kapasitas Olah:** ±1 Ton gabah segar per siklus pengeringan (18–24 jam).
+        * **Profil Kadar Air:** Diturunkan dari 27,72% (basis basah) menjadi ≤ 14,0% (Standar SNI 6128:2020).
+        * **Sumber Daya:** Array PLTS 4.000 Wp baterai penyimpanan & tungku biomassa batang padi.
+        * **Tingkat Kesiapan Teknologi:** TKT level 6–7 (teruji operasional lapangan).
         """)
 
     with col_spec_b:
         st.markdown("""
-        **Ringkasan Anggaran & Lokasi Proyek[cite: 7]:**
-        * **Total Rencana Anggaran Biaya (RAB):** **Rp 220.000.000,-** *(maksimal Rp 250 juta)*[cite: 7].
-        * **Alokasi Investasi Pokok:** Konstruksi rumah pengering galvanis, tungku biomassa cor beton, pipa stainless steel, blower induksi, filter ganda (HEPA & Coarse), dan modul sensor IoT[cite: 7].
-        * **Mitra Sasaran & Lokasi:** Sentra Pertanian Terpadu Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora[cite: 7].
-        * **Mitra Kolaborasi:** PT Pertamina EP Cepu Field Cepu[cite: 7].
+        **Ringkasan Anggaran & Lokasi Proyek:**
+        * **Total Rencana Anggaran Biaya (RAB):** **Rp 220.000.000,-** *(maksimal Rp 250 juta)*.
+        * **Alokasi Investasi Pokok:** Konstruksi rumah pengering galvanis, tungku biomassa cor beton, pipa stainless steel, blower induksi, filter ganda (HEPA & Coarse), dan modul sensor IoT.
+        * **Mitra Sasaran & Lokasi:** Sentra Pertanian Terpadu Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora.
+        * **Mitra Kolaborasi:** PT Pertamina EP Cepu Field Cepu.
         """)
 
 # ==============================================================================
@@ -648,9 +648,9 @@ with tab_spek:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #697184; font-size: 12px; line-height: 1.6;">
-    <strong>SI-PADI: Pengering Padi Surya Terintegrasi IoT</strong>[cite: 7]<br>
-    Kompetisi Inovasi Teknologi dan Energi — Program PFsains Pertamina Foundation 2026[cite: 7]<br>
-    <strong>Tim Pengusul:</strong> Prof. Dr. Ir. Widayat, S.T., M.T., IPM., ASEAN Eng. (Ketua · Undip) · Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T.[cite: 7]<br>
-    Pusat Organik PUSAKA BLORA · PT Pertamina EP Cepu Field Cepu[cite: 7]
+    <strong>SI-PADI: Pengering Padi Surya Terintegrasi IoT</strong><br>
+    Kompetisi Inovasi Teknologi dan Energi — Program PFsains Pertamina Foundation 2026<br>
+    <strong>Tim Pengusul:</strong> Prof. Dr. Ir. Widayat, S.T., M.T., IPM., ASEAN Eng. (Ketua · Undip) · Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T.<br>
+    Pusat Organik PUSAKA BLORA · PT Pertamina EP Cepu Field Cepu
 </div>
 """, unsafe_allow_html=True)
