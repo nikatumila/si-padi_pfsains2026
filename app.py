@@ -697,7 +697,7 @@ def sinkron():
 # SIDEBAR - KONSOL DEMO
 # ==============================================================================
 with st.sidebar:
-    st.markdown("### Konsol demo")
+    st.markdown("### Konsol Demo")
     st.caption("4 menit demo = 24 jam proses. 10 detik = 1 jam, 1 detik = 6 menit.")
     kol1, kol2 = st.columns(2)
     with kol1:
@@ -768,7 +768,7 @@ def header():
     html(f"""
     <div class="topbar">
       <div>
-        <h1>🌾 SI-PADI - Panel Monitoring Pengering Gabah Padi</h1>
+        <h1>🌾 SI-PADI-Panel Monitoring Pengering Gabah Padi</h1>
         <p>Rumah pengering hibrida surya-biomassa 1 ton, 3 zona sensor rak, Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kedungtuban, Blora</p>
       </div>
       <div class="chips">
