@@ -698,7 +698,7 @@ def sinkron():
 # ==============================================================================
 with st.sidebar:
     st.markdown("### Konsol Demo")
-    st.caption("4 menit demo = 24 jam proses. 10 detik = 1 jam, 1 detik = 6 menit.")
+    st.caption("Skala 4 menit simulasi = 24 jam proses")
     kol1, kol2 = st.columns(2)
     with kol1:
         if st.session_state.berjalan:
