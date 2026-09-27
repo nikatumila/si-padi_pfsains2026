@@ -732,7 +732,7 @@ with st.sidebar:
                       "17:30 cerah, lalu malam. Menunjukkan peralihan energi hibrida secara otomatis.")
 
     st.markdown("---")
-    with st.expander("Panduan presentasi 4 menit", expanded=False):
+    with st.expander("Panduan Penggunaan Simulasi", expanded=False):
         st.markdown("""
 | Demo | Jam proses | Yang ditunjukkan |
 |---|---|---|
