@@ -8,7 +8,6 @@ Kebutuhan:  streamlit >= 1.50 (st.fragment, parameter width), pandas, altair
 KA 27,72 % bb -> 14 % bb dalam 18-24 jam untuk ±1 ton gabah per batch.
 """
 import time
-from datetime import datetime, timedelta, timezone
 
 import altair as alt
 import pandas as pd
@@ -523,7 +522,6 @@ def ringkasan(s, target_ka):
 #                                  TAMPILAN
 # ==============================================================================
 # ==============================================================================
-WIB = timezone(timedelta(hours=7))
 WARNA_ZONA = {"bawah": "#ff7b72", "tengah": "#d19a38", "atas": "#58a6ff"}
 URUTAN_TAMPIL = ["atas", "tengah", "bawah"]     # sesuai posisi fisik rak
 
@@ -531,62 +529,99 @@ st.set_page_config(
     page_title="SI-PADI - Panel Monitoring Pengering Gabah",
     page_icon="🌾",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown("""
 <style>
-.stApp { background-color: #0f1015; color: #e2e4e9; }
-.block-container { padding-top: 3rem; }
-.topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap;
+.stApp { background-color:#0f1015; color:#e2e4e9; }
+header[data-testid="stHeader"] { background:transparent; }
+.block-container { padding:2.6rem 2rem 2rem 2rem; max-width:1560px; }
+/* ---- header ---- */
+.topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
   background:linear-gradient(180deg,#181b24 0%,#13151c 100%); border:1px solid #282d3c; border-radius:10px;
-  padding:16px 22px; margin-bottom:14px; }
-.topbar h1 { font-size:22px; font-weight:700; color:#f1f3f7; margin:0; padding:0; letter-spacing:-0.2px; }
-.topbar p { font-size:13px; color:#9299a8; margin:4px 0 0 0; }
-.chips { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-.chip { background:#1a1e29; border:1px solid #333a4d; border-radius:6px; padding:5px 11px; font-size:12.5px; color:#c9ccd4; }
+  padding:14px 20px; margin-bottom:10px; }
+.topbar h1 { font-size:21px; font-weight:700; color:#f1f3f7; margin:0; padding:0; letter-spacing:-0.2px; }
+.topbar p { font-size:12.5px; color:#9299a8; margin:3px 0 0 0; }
+.chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.chip { background:#1a1e29; border:1px solid #333a4d; border-radius:6px; padding:4px 10px; font-size:12.5px;
+  color:#c9ccd4; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .chip b { color:#f1f3f7; }
-.chip.jam { color:#d19a38; font-weight:700; font-variant-numeric:tabular-nums; }
-.demo-bar { height:6px; background:#1f2431; border-radius:4px; overflow:hidden; margin:2px 0 16px 0; }
+.chip.jam { color:#d19a38; font-weight:700; }
+.demo-bar { height:5px; background:#1f2431; border-radius:4px; overflow:hidden; margin:0 0 12px 0; }
 .demo-bar i { display:block; height:100%; background:linear-gradient(90deg,#d19a38,#3fb950); }
-.kpi-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
-@media (max-width: 1100px) { .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-.kpi { background:#141720; border:1px solid #232838; border-radius:8px; padding:13px 16px; }
-.kpi-j { font-size:12.5px; color:#8890a1; margin-bottom:6px; }
-.kpi-n { font-size:27px; font-weight:700; line-height:1.1; font-variant-numeric:tabular-nums; }
-.kpi-s { font-size:12px; color:#697184; margin-top:5px; }
-.kabinet { display:flex; gap:12px; background:#12141c; border:1px solid #232838; border-radius:10px; padding:12px; margin-bottom:10px; }
-.aliran { width:34px; border-radius:6px; background:linear-gradient(0deg,rgba(255,123,114,.55) 0%,rgba(209,154,56,.35) 50%,rgba(88,166,255,.25) 100%);
+/* ---- judul bagian ---- */
+.sec-j { font-size:15px; font-weight:700; color:#e2e4e9; margin:14px 0 6px 0; }
+.sec-j small { font-weight:400; color:#8890a1; font-size:12.5px; margin-left:6px; }
+/* ---- kartu angka ---- */
+.kpi-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin:4px 0 12px 0; }
+@media (max-width:1100px) { .kpi-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:700px) { .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.kpi { background:#141720; border:1px solid #232838; border-radius:8px; padding:11px 14px; }
+.kpi-j { font-size:12px; color:#8890a1; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kpi-n { font-size:26px; font-weight:700; line-height:1.15; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.kpi-u { font-size:14px; font-weight:600; color:#8890a1; margin-left:4px; }
+.kpi-s { font-size:11.5px; color:#697184; margin-top:4px; line-height:1.4; }
+/* ---- kabinet rak ---- */
+.kabinet { display:flex; gap:10px; background:#12141c; border:1px solid #232838; border-radius:10px; padding:10px; }
+.aliran { width:30px; border-radius:6px; background:linear-gradient(0deg,rgba(255,123,114,.55) 0%,rgba(209,154,56,.35) 50%,rgba(88,166,255,.25) 100%);
   display:flex; align-items:center; justify-content:center; }
-.aliran span { writing-mode:vertical-rl; transform:rotate(180deg); font-size:11px; color:#f1f3f7; letter-spacing:.3px; white-space:nowrap; }
-.rak-list { flex:1; display:flex; flex-direction:column; gap:8px; }
-.ventilasi { font-size:11.5px; color:#8890a1; padding:0 4px 2px 4px; }
-.rak { display:grid; grid-template-columns:1.35fr .75fr .6fr .85fr 1.6fr .7fr; gap:10px; align-items:center;
-  background:#141720; border:1px solid #232838; border-left:4px solid var(--c); border-radius:8px; padding:10px 14px; }
-@media (max-width: 900px) { .rak { grid-template-columns:1fr 1fr 1fr; } }
+.aliran span { writing-mode:vertical-rl; transform:rotate(180deg); font-size:11px; color:#f1f3f7; white-space:nowrap; }
+.rak-list { flex:1; display:flex; flex-direction:column; gap:7px; }
+.ventilasi { font-size:11.5px; color:#8890a1; padding:0 4px; }
+.rak { display:grid; grid-template-columns:1.1fr .8fr .6fr 1fr 1.7fr auto; gap:12px; align-items:center;
+  background:#141720; border:1px solid #232838; border-left:4px solid var(--c); border-radius:8px; padding:9px 14px; }
+@media (max-width:900px) { .rak { grid-template-columns:1fr 1fr 1fr; } }
 .rak-nama { font-size:15px; font-weight:700; color:#f1f3f7; }
-.rak-nama small { display:block; font-size:11.5px; color:#697184; font-weight:400; margin-top:2px; }
-.ukur label { display:block; font-size:11.5px; color:#8890a1; }
-.ukur b { font-size:16px; color:#f1f3f7; font-variant-numeric:tabular-nums; }
-.ka b { font-size:22px; font-variant-numeric:tabular-nums; }
-.bar { height:6px; background:#1f2431; border-radius:4px; overflow:hidden; margin-top:5px; }
+.rak-nama small { display:block; font-size:11.5px; color:#697184; font-weight:400; margin-top:1px; }
+.ukur label { display:block; font-size:11px; color:#8890a1; }
+.ukur b { font-size:15px; color:#f1f3f7; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ka b { font-size:21px; font-variant-numeric:tabular-nums; }
+.bar { height:6px; background:#1f2431; border-radius:4px; overflow:hidden; margin-top:4px; }
 .bar i { display:block; height:100%; }
 .ka small { font-size:11px; color:#697184; }
-.pill { justify-self:end; border-radius:4px; padding:3px 9px; font-size:11.5px; font-weight:600; white-space:nowrap; }
-.pill.proses { background:#2b2111; color:#e5a43b; border:1px solid #543f1e; }
-.pill.selesai { background:#12281a; color:#3fb950; border:1px solid #238636; }
-.pill.henti { background:#2a1414; color:#ff7b72; border:1px solid #6e2b2b; }
-.panel-j { font-size:14px; font-weight:700; color:#d19a38; margin-bottom:4px; }
-.akt { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:6px 0 4px 0; }
-.akt div { background:#0f1015; border:1px solid #232838; border-radius:6px; padding:8px 10px; font-size:12px; color:#8890a1; }
-.akt b { display:block; font-size:15px; color:#f1f3f7; margin-top:2px; }
-.alarm { border-radius:6px; padding:8px 10px; font-size:12.5px; margin-bottom:6px; border:1px solid; }
+.pill { border-radius:4px; padding:3px 9px; font-size:11.5px; font-weight:600; white-space:nowrap; text-align:center; }
+.pill.proses, .pill.Info { background:#2b2111; color:#e5a43b; border:1px solid #543f1e; }
+.pill.selesai, .pill.Sukses { background:#12281a; color:#3fb950; border:1px solid #238636; }
+.pill.henti, .pill.Kritis { background:#2a1414; color:#ff7b72; border:1px solid #6e2b2b; }
+.pill.Peringatan { background:#2b2111; color:#f0c476; border:1px solid #6b5220; }
+.pill.Info { background:#161d2b; color:#8ab4f8; border:1px solid #2b3a57; }
+/* ---- panel kendali & alarm ---- */
+.panel-j { font-size:14px; font-weight:700; color:#d19a38; margin-bottom:2px; }
+.akt { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin:4px 0 2px 0; }
+.akt div { background:#0f1015; border:1px solid #232838; border-radius:6px; padding:7px 10px; font-size:11.5px; color:#8890a1; }
+.akt b { display:block; font-size:14.5px; color:#f1f3f7; margin-top:1px; }
+.alarm { border-radius:6px; padding:7px 10px; font-size:12.5px; margin-bottom:6px; border:1px solid; }
 .alarm.Kritis { background:#2a1414; border-color:#6e2b2b; color:#ffb3ad; }
 .alarm.Peringatan { background:#2b2111; border-color:#543f1e; color:#f0c476; }
 .alarm.ok { background:#12281a; border-color:#238636; color:#8fe0a0; }
-.logi { font-size:12px; color:#9299a8; padding:5px 0; border-bottom:1px solid #1f2431; }
-.logi b { color:#c9ccd4; font-variant-numeric:tabular-nums; }
-.catatan { font-size:12.5px; color:#8890a1; line-height:1.55; }
+.logi { font-size:12px; color:#9299a8; padding:5px 0; border-bottom:1px solid #1f2431; line-height:1.45; }
+.logi:last-child { border-bottom:none; }
+.logi b { color:#c9ccd4; font-variant-numeric:tabular-nums; margin-right:6px; }
+/* ---- strip ringkas & catatan ---- */
+.strip { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px 0; }
+.stat { background:#141720; border:1px solid #232838; border-radius:6px; padding:6px 12px; font-size:12.5px; color:#8890a1; }
+.stat b { color:#f1f3f7; margin-left:4px; font-variant-numeric:tabular-nums; }
+.catatan { font-size:12.5px; color:#8890a1; line-height:1.6; max-width:1100px; }
+.legenda { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:#c9ccd4; margin:0 0 4px 0; }
+.legenda i { display:inline-block; width:16px; height:3px; vertical-align:middle; margin-right:6px; border-radius:2px; }
+.banner { border-radius:8px; padding:11px 16px; font-size:14px; margin:4px 0 10px 0; border:1px solid; }
+.banner.ok { background:#12281a; border-color:#238636; color:#8fe0a0; }
+.banner.info { background:#141720; border-color:#232838; color:#9299a8; }
+/* ---- tabel log ---- */
+.tabel-log { max-height:380px; overflow-y:auto; border:1px solid #232838; border-radius:8px; }
+.tabel-log table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.tabel-log .pill { font-size:11px; padding:2px 8px; }
+.stMarkdown .pill, .stMarkdown button { font-family:inherit; }
+.tabel-log th { position:sticky; top:0; background:#181b24; color:#8890a1; font-weight:600; text-align:left; padding:8px 12px; }
+.tabel-log td { padding:7px 12px; border-top:1px solid #1f2431; color:#c9ccd4; vertical-align:middle; }
+.tabel-log td.num { font-variant-numeric:tabular-nums; color:#9299a8; white-space:nowrap; }
+/* ---- anggaran ---- */
+.rab-bar { display:flex; height:14px; border-radius:7px; overflow:hidden; margin:6px 0 10px 0; }
+.rab-item { display:flex; justify-content:space-between; gap:12px; font-size:13px; color:#c9ccd4; padding:5px 0; border-bottom:1px solid #1f2431; }
+.rab-item span i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:8px; vertical-align:middle; }
+.rab-item b { font-variant-numeric:tabular-nums; }
+/* ---- diagram alir hidup ---- */
 .hmi svg { width:100%; height:auto; display:block; }
 .hmi .pipa { fill:none; stroke:#232838; stroke-width:8; stroke-linecap:round; stroke-linejoin:round; }
 .hmi .alir { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:8 7;
@@ -603,17 +638,45 @@ st.markdown("""
 @keyframes api { from { transform:scaleY(.78); opacity:.7; } to { transform:scaleY(1.08); opacity:1; } }
 .hmi.jeda .alir, .hmi.jeda .kipas, .hmi.jeda .api { animation-play-state:paused; }
 @media (prefers-reduced-motion: reduce) { .hmi .alir, .hmi .kipas, .hmi .api { animation:none; } }
+/* ---- footer ---- */
+.footer { text-align:center; color:#697184; font-size:12px; line-height:1.7; margin-top:8px; }
+.footer b { color:#9299a8; }
 </style>
 """, unsafe_allow_html=True)
 
 
 def html(s):
-    """Streamlit menganggap baris berindentasi sebagai blok kode - rapatkan dulu."""
+    """Streamlit menganggap baris berindentasi sebagai blok kode, jadi rapatkan dulu."""
     st.markdown(" ".join(baris.strip() for baris in s.splitlines() if baris.strip()), unsafe_allow_html=True)
 
 
 def f1(x, d=1):
     return f"{x:,.{d}f}".replace(",", "#").replace(".", ",").replace("#", ".")
+
+
+def kpi(judul, nilai, satuan="", sub="", warna="#f1f3f7"):
+    return (f'<div class="kpi"><div class="kpi-j">{judul}</div>'
+            f'<div class="kpi-n" style="color:{warna}">{nilai}<span class="kpi-u">{satuan}</span></div>'
+            f'<div class="kpi-s">{sub}</div></div>')
+
+
+def baris_kpi(*kartu):
+    html('<div class="kpi-grid">' + "".join(kartu) + "</div>")
+
+
+def judul(teks, keterangan=""):
+    html(f'<div class="sec-j">{teks}{f"<small>{keterangan}</small>" if keterangan else ""}</div>')
+
+
+def legenda(item):
+    """item: (teks, warna, putus-putus?)"""
+    html('<div class="legenda">' + "".join(
+        f'<span><i style="background:{"repeating-linear-gradient(90deg," + w + " 0 5px,transparent 5px 8px)" if putus else w};"></i>{t}</span>'
+        for t, w, putus in item) + "</div>")
+
+
+def strip(*pasangan):
+    html('<div class="strip">' + "".join(f'<div class="stat">{a}<b>{b}</b></div>' for a, b in pasangan) + "</div>")
 
 
 # ==============================================================================
@@ -672,61 +735,45 @@ def sinkron():
 
 
 # ==============================================================================
-# SIDEBAR - KONSOL DEMO
+# SIDEBAR - PANDUAN PRESENTASI (tersembunyi secara bawaan)
 # ==============================================================================
 with st.sidebar:
-    st.markdown("### Konsol demo")
+    st.markdown("### Panduan presentasi 4 menit")
     st.caption("4 menit demo = 24 jam proses. 10 detik = 1 jam, 1 detik = 6 menit.")
-    kol1, kol2 = st.columns(2)
-    with kol1:
-        if st.session_state.berjalan:
-            if st.button("⏸ Jeda", width="stretch"):
-                st.session_state.detik_akumulasi = detik_demo()
-                st.session_state.berjalan = False
-                st.session_state.t_mulai = None
-                st.rerun()
-        else:
-            label = "▶ Mulai" if st.session_state.detik_akumulasi == 0 else "▶ Lanjutkan"
-            if st.button(label, width="stretch", type="primary",
-                         disabled=st.session_state.detik_akumulasi >= DEMO_DETIK):
-                st.session_state.berjalan = True
-                st.session_state.t_mulai = time.time()
-                st.rerun()
-    with kol2:
-        if st.button("↺ Reset", width="stretch"):
-            reset_demo()
-            st.rerun()
-    if st.button("⏩ Maju 1 jam proses", width="stretch",
-                 disabled=detik_demo() >= DEMO_DETIK):
-        st.session_state.detik_akumulasi = min(float(DEMO_DETIK), detik_demo() + 1.0 / JAM_PER_DETIK)
-        if st.session_state.berjalan:
-            st.session_state.t_mulai = time.time()
-        st.rerun()
+    st.markdown("""
+**00:00** · pukul 08:00
+Tekan **Mulai**. Di tab Diagram alir, jelaskan alur tungku batang padi → filter → penukar panas hibrida → rumah pengering, lalu PLTS → baterai → blower & IoT.
 
-    st.markdown("---")
-    st.markdown("### Cuaca")
-    st.selectbox("Kondisi radiasi matahari", list(PILIHAN_CUACA), key="k_cuaca",
-                 help="Skenario demo: pagi cerah, 12:00 berawan, 14:00 hujan, 16:00 berawan, "
-                      "17:30 cerah, lalu malam. Menunjukkan peralihan energi hibrida secara otomatis.")
+**00:30** · pukul 11:00
+Pindah ke **Panel operasional**: KA awal 27,7 %, tiga zona rak, pusat kendali.
 
-    st.markdown("---")
-    with st.expander("Panduan presentasi 4 menit", expanded=False):
-        st.markdown("""
-| Demo | Jam proses | Yang ditunjukkan |
-|---|---|---|
-| 00:00 | 08:00 | Tekan **Mulai**. Tab **Diagram alir**: jelaskan alur tungku batang padi → filter → penukar panas hibrida → rumah pengering, dan PLTS → baterai → blower & IoT |
-| 00:30 | 11:00 | Pindah ke **Panel operasional**: KA awal 27,7 %, 3 zona rak, pusat kendali |
-| 00:40 | 12:00 | Berawan - buka tab **Energi hibrida**, tungku menaikkan daya |
-| 01:00 | 14:00 | Hujan - suhu rak tetap di setpoint berkat biomassa |
-| 01:40 | 18:00 | Matahari terbenam - beban ditopang baterai |
-| 02:52 | 01:16 | Rak Bawah mencapai 14 % (kembali ke **Panel operasional**) |
-| 03:10 | 03:02 | Baterai < 30 % → mode hemat energi otomatis |
-| 03:20 | 04:00 | Rak Tengah mencapai 14 % |
-| 03:40 | 06:01 | Rak Atas selesai → tungku mati otomatis, pendinginan |
-| 03:45 | 06:34 | Tab **Log & ekspor**: ringkasan batch dan unduh CSV |
+**00:40** · pukul 12:00
+Berawan. Buka **Energi hibrida**, daya tungku naik.
 
-Uji interaktif (singkat, lalu kembalikan): setpoint 55 °C → alarm suhu rak; mode manual lalu matikan blower → interlock tungku.
+**01:00** · pukul 14:00
+Hujan. Suhu rak tetap di setpoint berkat biomassa.
+
+**01:40** · pukul 18:00
+Matahari terbenam, beban ditopang baterai.
+
+**02:52** · pukul 01:16
+Rak Bawah mencapai 14 %. Kembali ke **Panel operasional**.
+
+**03:10** · pukul 03:02
+Baterai di bawah 30 %, mode hemat energi otomatis.
+
+**03:20** · pukul 04:00
+Rak Tengah mencapai 14 %.
+
+**03:40** · pukul 06:01
+Rak Atas selesai, tungku mati otomatis, pendinginan.
+
+**03:45** · pukul 06:34
+Tab **Log & ekspor**: ringkasan batch dan unduh CSV.
 """)
+    st.markdown("---")
+    st.caption("Uji interaktif (singkat, lalu kembalikan): setpoint 55 °C memicu alarm suhu rak; "
+               "mode manual lalu matikan blower memicu interlock tungku.")
 
 # ==============================================================================
 # HEADER (diperbarui tiap detik)
@@ -743,19 +790,19 @@ def header():
     status = ("DEMO BERJALAN" if st.session_state.berjalan else
               ("DEMO SELESAI" if d >= DEMO_DETIK else ("DIJEDA" if d > 0 else "SIAP")))
     warna_status = "#3fb950" if st.session_state.berjalan else "#d19a38"
+    cuaca = CUACA[s["cuaca"]]["label"] if s["iradiasi"] > 0 else "Malam"
     html(f"""
     <div class="topbar">
       <div>
         <h1>🌾 SI-PADI - Panel Monitoring Pengering Gabah Padi</h1>
-        <p>Rumah pengering hibrida surya-biomassa 1 ton, 3 zona sensor rak, Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kedungtuban, Blora</p>
+        <p>Rumah pengering hibrida surya-biomassa 1 ton, Pusat Organik PUSAKA BLORA, Kedungtuban, Blora</p>
       </div>
       <div class="chips">
         <div class="chip" style="color:{warna_status};font-weight:700;">{status}</div>
         <div class="chip jam">Jam proses {f1(s['jam'])} / 24</div>
-        <div class="chip">Pukul simulasi <b>{format_jam(jam_lokal)}</b></div>
-        <div class="chip">Cuaca <b>{CUACA[s['cuaca']]['label'] if s['iradiasi'] > 0 else 'Malam'}</b></div>
+        <div class="chip">Pukul <b>{format_jam(jam_lokal)}</b></div>
+        <div class="chip">Cuaca <b>{cuaca}</b></div>
         <div class="chip">Demo <b>{int(d)//60:02d}:{int(d)%60:02d}</b> / {DEMO_DETIK // 60:02d}:{DEMO_DETIK % 60:02d}</div>
-        <div class="chip">{datetime.now(WIB).strftime('%H:%M:%S')} WIB</div>
       </div>
     </div>
     <div class="demo-bar"><i style="width:{d / DEMO_DETIK * 100:.1f}%"></i></div>
@@ -763,6 +810,39 @@ def header():
 
 
 header()
+
+# ==============================================================================
+# BARIS KENDALI DEMO
+# ==============================================================================
+kb1, kb2, kb3, kb4, _ = st.columns([1.15, 1.25, 0.9, 2.0, 2.2], vertical_alignment="center")
+with kb1:
+    if st.session_state.berjalan:
+        if st.button("⏸ Jeda", width="stretch"):
+            st.session_state.detik_akumulasi = detik_demo()
+            st.session_state.berjalan = False
+            st.session_state.t_mulai = None
+            st.rerun()
+    else:
+        label = "▶ Mulai" if st.session_state.detik_akumulasi == 0 else "▶ Lanjutkan"
+        if st.button(label, width="stretch", type="primary",
+                     disabled=st.session_state.detik_akumulasi >= DEMO_DETIK):
+            st.session_state.berjalan = True
+            st.session_state.t_mulai = time.time()
+            st.rerun()
+with kb2:
+    if st.button("⏩ Maju 1 jam proses", width="stretch", disabled=detik_demo() >= DEMO_DETIK):
+        st.session_state.detik_akumulasi = min(float(DEMO_DETIK), detik_demo() + 1.0 / JAM_PER_DETIK)
+        if st.session_state.berjalan:
+            st.session_state.t_mulai = time.time()
+        st.rerun()
+with kb3:
+    if st.button("↺ Reset", width="stretch"):
+        reset_demo()
+        st.rerun()
+with kb4:
+    st.selectbox("Skenario cuaca", list(PILIHAN_CUACA), key="k_cuaca", label_visibility="collapsed",
+                 help="Skenario demo: pagi cerah, 12:00 berawan, 14:00 hujan, 16:00 berawan, 17:30 cerah, "
+                      "lalu malam. Menunjukkan peralihan energi hibrida secara otomatis.")
 
 
 # ==============================================================================
@@ -774,17 +854,25 @@ def gaya(ch, tinggi=250):
     return (ch
             .configure(background="transparent")
             .configure_axis(labelColor="#8890a1", titleColor="#8890a1", gridColor="#1f2431",
-                            domainColor="#333a4d", tickColor="#333a4d", labelFontSize=11, titleFontSize=11)
-            .configure_legend(labelColor="#c9ccd4", titleColor="#8890a1", orient="bottom", labelFontSize=11)
+                            domainColor="#333a4d", tickColor="#333a4d", labelFontSize=11, titleFontSize=11,
+                            titleFontWeight="normal")
             .configure_view(strokeWidth=0))
 
 
-SUMBU_JAM = alt.X("jam:Q", title="Jam proses (4 menit demo = 24 jam)",
+SUMBU_JAM = alt.X("jam:Q", title="Jam proses",
                   scale=alt.Scale(domain=[0, 24]), axis=alt.Axis(values=list(range(0, 25, 2))))
+LEGENDA_RAK = [(NAMA_ZONA[z], WARNA_ZONA[z], False) for z in URUTAN_TAMPIL]
 
 
 def df_riwayat():
     return pd.DataFrame(st.session_state.sim["riwayat"])
+
+
+def garis_acuan(nilai, teks, warna="#3fb950"):
+    rule = alt.Chart(pd.DataFrame({"y": [nilai]})).mark_rule(strokeDash=[5, 4], color=warna).encode(y="y:Q")
+    label = alt.Chart(pd.DataFrame({"y": [nilai], "t": [teks], "jam": [23.8]})).mark_text(
+        align="right", dy=-7, color=warna, fontSize=11).encode(x="jam:Q", y="y:Q", text="t:N")
+    return [rule, label]
 
 
 def grafik_per_rak(df, awalan, judul_y, domain=None, garis=None, garis_label=None):
@@ -795,26 +883,16 @@ def grafik_per_rak(df, awalan, judul_y, domain=None, garis=None, garis_label=Non
     garis_rak = alt.Chart(panjang).mark_line(strokeWidth=2.2).encode(
         x=SUMBU_JAM,
         y=alt.Y("nilai:Q", title=judul_y, scale=skala_y),
-        color=alt.Color("rak:N", title=None,
+        color=alt.Color("rak:N", legend=None,
                         scale=alt.Scale(domain=[NAMA_ZONA[z] for z in URUTAN_TAMPIL],
                                         range=[WARNA_ZONA[z] for z in URUTAN_TAMPIL])),
-        tooltip=[alt.Tooltip("jam:Q", title="Jam", format=".1f"), "rak:N",
+        tooltip=[alt.Tooltip("jam:Q", title="Jam", format=".1f"), alt.Tooltip("rak:N", title="Rak"),
                  alt.Tooltip("nilai:Q", title=judul_y, format=".1f")],
     )
     lapis = [garis_rak]
     if garis is not None:
-        lapis.append(alt.Chart(pd.DataFrame({"y": [garis]})).mark_rule(
-            strokeDash=[5, 4], color="#3fb950").encode(y="y:Q"))
-        lapis.append(alt.Chart(pd.DataFrame({"y": [garis], "t": [garis_label], "jam": [0.3]})).mark_text(
-            align="left", dy=-7, color="#3fb950", fontSize=11).encode(x="jam:Q", y="y:Q", text="t:N"))
+        lapis += garis_acuan(garis, garis_label)
     return alt.layer(*lapis)
-
-
-def legenda(item):
-    html('<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#c9ccd4;margin:-4px 0 4px 0;">'
-         + "".join(f'<span><i style="display:inline-block;width:14px;height:3px;background:{w};'
-                   f'vertical-align:middle;margin-right:6px;{"background:repeating-linear-gradient(90deg," + w + " 0 4px,transparent 4px 7px);" if putus else ""}"></i>{t}</span>'
-                   for t, w, putus in item) + '</div>')
 
 
 WARNA_KONDISI = {"Cerah": "#e5a43b", "Berawan": "#8b95a8", "Hujan": "#58a6ff", "Malam": "#0a0b10"}
@@ -835,7 +913,7 @@ def latar_cuaca(df):
 # TAB
 # ==============================================================================
 tab_hmi, tab_dash, tab_energi, tab_emisi, tab_log, tab_spek = st.tabs([
-    "Diagram alir proses (HMI)",
+    "Diagram alir proses",
     "Panel operasional",
     "Energi hibrida",
     "Emisi & kualitas udara",
@@ -844,7 +922,7 @@ tab_hmi, tab_dash, tab_energi, tab_emisi, tab_log, tab_spek = st.tabs([
 ])
 
 # ------------------------------------------------------------------------------
-# TAB 1 - PANEL OPERASIONAL
+# TAB - PANEL OPERASIONAL
 # ------------------------------------------------------------------------------
 with tab_dash:
     @st.fragment(run_every=interval)
@@ -855,102 +933,85 @@ with tab_dash:
         r = ringkasan(s, k["target_ka"])
 
         if s["fase_akhir"] == "berhenti":
-            sisa_teks, sisa_sub = "Selesai", f"batch tuntas pada jam ke-{f1(s['jam_selesai_batch'])}"
+            sisa_n, sisa_u, sisa_s = "Selesai", "", f"batch tuntas pada jam ke-{f1(s['jam_selesai_batch'])}"
         elif s["selesai"]:
-            sisa_teks, sisa_sub = "Pendinginan", "tungku mati, blower 30 menit"
+            sisa_n, sisa_u, sisa_s = "Pendinginan", "", "tungku mati, blower 30 menit"
         else:
-            jam_prediksi = prediksi_selesai(s, k)
-            if jam_prediksi is None:
-                sisa_teks = "> 30 jam"
-                sisa_sub = "kondisi saat ini tidak cukup untuk mencapai target - periksa blower/tungku"
+            jp = prediksi_selesai(s, k)
+            if jp is None:
+                sisa_n, sisa_u, sisa_s = "> 30", "jam", "periksa blower dan tungku"
             else:
-                sisa_teks = f"±{f1(jam_prediksi - s['jam'])} jam"
-                sisa_sub = (f"prediksi selesai pukul {format_jam(JAM_MULAI + jam_prediksi)}, "
-                            f"total {f1(jam_prediksi)} jam (simulasi ke depan)")
+                sisa_n, sisa_u = f"±{f1(jp - s['jam'])}", "jam lagi"
+                sisa_s = f"prediksi selesai pukul {format_jam(JAM_MULAI + jp)}"
         warna_ka = "#3fb950" if r["ka_rata"] <= k["target_ka"] + 0.05 else "#d19a38"
-        html(f"""
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-j">Kadar air rata-rata batch</div>
-            <div class="kpi-n" style="color:{warna_ka}">{f1(r['ka_rata'])} %</div>
-            <div class="kpi-s">awal {f1(KA_AWAL_WB, 2)} % → target ≤ {f1(k['target_ka'])} % (bb)</div></div>
-          <div class="kpi"><div class="kpi-j">Rak mencapai target</div>
-            <div class="kpi-n" style="color:#f1f3f7">{r['selesai']} / 3</div>
-            <div class="kpi-s">{'semua rak siap dibongkar' if r['selesai'] == 3 else 'rak bawah kering lebih dulu (dekat saluran udara panas)'}</div></div>
-          <div class="kpi"><div class="kpi-j">Sisa waktu pengeringan</div>
-            <div class="kpi-n" style="color:#f1f3f7">{sisa_teks}</div>
-            <div class="kpi-s">{sisa_sub}</div></div>
-          <div class="kpi"><div class="kpi-j">Air sudah diuapkan</div>
-            <div class="kpi-n" style="color:#58a6ff">{f1(r['air_menguap'], 0)} kg</div>
-            <div class="kpi-s">massa gabah kini {f1(r['massa'], 0)} kg dari {f1(MASSA_AWAL_KG, 0)} kg</div></div>
-          <div class="kpi"><div class="kpi-j">Suhu udara masuk ruang</div>
-            <div class="kpi-n" style="color:#ff7b72">{f1(s['t_masuk'])} °C</div>
-            <div class="kpi-s">setpoint {f1(k['setpoint'], 0)} °C, luar {f1(s['t_amb'])} °C / RH {f1(s['rh_amb'], 0)} %</div></div>
-        </div>
-        """)
+        baris_kpi(
+            kpi("Kadar air rata-rata", f1(r["ka_rata"]), "%", f"awal {f1(KA_AWAL_WB, 2)} %, target ≤ {f1(k['target_ka'])} %", warna_ka),
+            kpi("Rak mencapai target", str(r["selesai"]), "/ 3",
+                "semua rak siap dibongkar" if r["selesai"] == 3 else "rak bawah kering lebih dulu"),
+            kpi("Sisa waktu pengeringan", sisa_n, sisa_u, sisa_s),
+            kpi("Air sudah diuapkan", f1(r["air_menguap"], 0), "kg", f"massa gabah kini {f1(r['massa'], 0)} kg", "#58a6ff"),
+            kpi("Udara masuk ruang", f1(s["t_masuk"]), "°C",
+                f"setpoint {f1(k['setpoint'], 0)} °C, udara luar {f1(s['t_amb'])} °C", "#ff7b72"),
+        )
 
-        kiri, kanan = st.columns([2.35, 1])
-
-        # ---- Kabinet rak ---------------------------------------------------
+        kiri, kanan = st.columns([2.4, 1], gap="medium")
         with kiri:
             baris_rak = ""
             for z in URUTAN_TAMPIL:
                 d = s["zona"][z]
                 ka = db_ke_wb(d["ka_db"])
-                kemajuan = max(0.0, min(1.0, (KA_AWAL_ZONA[z] - ka) / max(0.1, KA_AWAL_ZONA[z] - k["target_ka"])))
+                maju = max(0.0, min(1.0, (KA_AWAL_ZONA[z] - ka) / max(0.1, KA_AWAL_ZONA[z] - k["target_ka"])))
                 if d["status"] == "Selesai":
                     pill, teks_pill = "selesai", "Selesai"
                 elif s["blower"] == 0:
                     pill, teks_pill = "henti", "Tertahan"
                 else:
                     pill, teks_pill = "proses", "Proses"
-                warna_ka_rak = "#3fb950" if d["status"] == "Selesai" else "#f1f3f7"
+                laju = "-" if d["laju"] <= 0 else f"−{f1(d['laju'], 2)} %/jam"
                 baris_rak += f"""
                 <div class="rak" style="--c:{WARNA_ZONA[z]}">
-                  <div class="rak-nama">{NAMA_ZONA[z]}<small>Zona {NOMOR_ZONA[z]}, sensor suhu, RH & kadar air</small></div>
+                  <div class="rak-nama">{NAMA_ZONA[z]}<small>Zona {NOMOR_ZONA[z]}</small></div>
                   <div class="ukur"><label>Suhu</label><b>{f1(d['suhu'])} °C</b></div>
                   <div class="ukur"><label>RH</label><b>{f1(d['rh'], 0)} %</b></div>
-                  <div class="ukur"><label>Laju</label><b>{'-' if d['laju'] <= 0 else '−' + f1(d['laju'], 2)}</b><label>%/jam</label></div>
-                  <div class="ka"><b style="color:{warna_ka_rak}">{f1(ka)} %</b>
-                    <div class="bar"><i style="width:{kemajuan * 100:.0f}%;background:{WARNA_ZONA[z]}"></i></div>
-                    <small>{kemajuan * 100:.0f} % menuju {f1(k['target_ka'])} %</small></div>
+                  <div class="ukur"><label>Laju pengeringan</label><b>{laju}</b></div>
+                  <div class="ka"><b style="color:{'#3fb950' if d['status'] == 'Selesai' else '#f1f3f7'}">{f1(ka)} %</b>
+                    <div class="bar"><i style="width:{maju * 100:.0f}%;background:{WARNA_ZONA[z]}"></i></div>
+                    <small>{maju * 100:.0f} % menuju {f1(k['target_ka'])} %</small></div>
                   <div class="pill {pill}">{teks_pill}</div>
                 </div>"""
-            rh_atas = s["zona"]["atas"]["rh"]
             html(f"""
             <div class="kabinet">
               <div class="aliran"><span>udara panas bersih dari penukar panas ↑</span></div>
               <div class="rak-list">
-                <div class="ventilasi">↑ Udara lembap keluar lewat ventilasi atap (RH {f1(rh_atas, 0)} %)</div>
+                <div class="ventilasi">↑ Udara lembap keluar lewat ventilasi atap, RH {f1(s['zona']['atas']['rh'], 0)} %</div>
                 {baris_rak}
               </div>
             </div>""")
 
             df = df_riwayat()
-            st.markdown("##### Kinetika pengeringan - kadar air tiap rak")
+            judul("Kinetika pengeringan", "kadar air tiap rak terhadap jam proses")
+            legenda(LEGENDA_RAK + [(f"Target {f1(k['target_ka'])} %", "#3fb950", True)])
             st.altair_chart(gaya(grafik_per_rak(df, "ka", "Kadar air (% bb)", [12, 29],
-                                                k["target_ka"], f"Target {f1(k['target_ka'])} %"), 270),
+                                                k["target_ka"], f"Target {f1(k['target_ka'])} %"), 260),
                             width="stretch")
-            g1, g2 = st.columns(2)
+            g1, g2 = st.columns(2, gap="medium")
             with g1:
-                st.markdown("##### Suhu rak")
-                st.altair_chart(gaya(grafik_per_rak(df, "suhu", "°C", [20, 60],
-                                                    k["setpoint"], f"Setpoint {f1(k['setpoint'], 0)} °C"), 200),
+                judul("Suhu rak")
+                st.altair_chart(gaya(grafik_per_rak(df, "suhu", "Suhu (°C)", [20, 60],
+                                                    k["setpoint"], f"Setpoint {f1(k['setpoint'], 0)} °C"), 190),
                                 width="stretch")
             with g2:
-                st.markdown("##### Kelembapan relatif rak")
-                st.altair_chart(gaya(grafik_per_rak(df, "rh", "RH (%)", [0, 100]), 200),
-                                width="stretch")
+                judul("Kelembapan relatif rak")
+                st.altair_chart(gaya(grafik_per_rak(df, "rh", "RH (%)", [0, 100]), 190), width="stretch")
 
-        # ---- Pusat kendali -------------------------------------------------
         with kanan:
             with st.container(border=True):
                 html('<div class="panel-j">Pusat kendali unit 1 ton</div>')
                 st.radio("Mode pengendalian", ["Otomatis (PID)", "Manual"], key="k_mode", horizontal=True)
                 st.slider("Setpoint suhu udara pengering (°C)", 38, 55, key="k_sp",
-                          help=f"Alarm muncul bila suhu rak > {T_MAKS_GABAH:.0f} °C (risiko gabah retak).")
+                          help=f"Alarm muncul bila suhu rak di atas {T_MAKS_GABAH:.0f} °C (risiko gabah retak).")
                 st.slider("Target kadar air akhir (% bb)", 12.0, 15.0, step=0.5, key="k_target", format="%.1f",
-                          disabled=s["selesai"],
-                          help="Gabah kering giling umumnya ≤ 14 %.")
+                          disabled=s["selesai"], help="Gabah kering giling umumnya ≤ 14 %.")
                 if k["mode"] == "manual":
                     t1, t2 = st.columns(2)
                     with t1:
@@ -960,10 +1021,10 @@ with tab_dash:
                     st.caption("Tanpa blower, tungku otomatis dikunci (interlock).")
                 sumber_panas = ("Surya + biomassa" if s["firing"] > 0.05 and s["iradiasi"] > 50 else
                                 "Biomassa" if s["firing"] > 0.05 else
-                                "Surya (rumah kaca)" if s["iradiasi"] > 50 else "-")
+                                "Surya" if s["iradiasi"] > 50 else "-")
                 html(f"""
                 <div class="akt">
-                  <div>Blower<b>{'MATI' if s['blower'] == 0 else f"{s['blower'] * 100:.0f} %"}</b></div>
+                  <div>Blower<b>{'Mati' if s['blower'] == 0 else f"{s['blower'] * 100:.0f} %"}</b></div>
                   <div>Daya tungku<b>{s['firing'] * 100:.0f} %</b></div>
                   <div>Sumber panas<b>{sumber_panas}</b></div>
                   <div>Listrik<b>{s['sumber_listrik']}</b></div>
@@ -971,112 +1032,96 @@ with tab_dash:
 
             with st.container(border=True):
                 html('<div class="panel-j">Alarm aktif</div>')
-                aktif = []
                 peta = {
-                    "interlock": ("Kritis", "Blower mati - tungku dikunci"),
-                    "panas": ("Kritis", f"Suhu rak > {T_MAKS_GABAH:.0f} °C"),
+                    "interlock": ("Kritis", "Blower mati, tungku dikunci"),
+                    "panas": ("Kritis", f"Suhu rak di atas {T_MAKS_GABAH:.0f} °C"),
                     "timeout": ("Kritis", "24 jam tercapai, KA belum di target"),
-                    "pemanas_off": ("Peringatan", "Pemanas mati - pengeringan melambat"),
-                    "hemat": ("Peringatan", "Mode hemat energi - blower 70 %"),
-                    "selisih": ("Peringatan", "Selisih KA antar rak > 5 %"),
-                    "co": ("Peringatan", f"CO gas buang > {AMBANG_CO:.0f} mg/Nm³"),
-                    "pm": ("Peringatan", f"Partikulat > {AMBANG_PM:.0f} mg/Nm³"),
+                    "pemanas_off": ("Peringatan", "Pemanas mati, pengeringan melambat"),
+                    "hemat": ("Peringatan", "Mode hemat energi, blower 70 %"),
+                    "selisih": ("Peringatan", "Selisih KA antar rak di atas 5 %"),
+                    "co": ("Peringatan", f"CO gas buang di atas {AMBANG_CO:.0f} mg/Nm³"),
+                    "pm": ("Peringatan", f"Partikulat di atas {AMBANG_PM:.0f} mg/Nm³"),
                     "filter": ("Peringatan", "Tekanan filter tinggi"),
                 }
-                for kunci, (tingkat, teks) in peta.items():
-                    if s["flag"].get(kunci):
-                        aktif.append(f'<div class="alarm {tingkat}">{teks}</div>')
+                aktif = [f'<div class="alarm {t}">{teks}</div>' for kunci, (t, teks) in peta.items() if s["flag"].get(kunci)]
                 if s["sumber_listrik"] == "Grid":
                     aktif.append('<div class="alarm Peringatan">Suplai dari cadangan jaringan</div>')
                 html("".join(aktif) if aktif else '<div class="alarm ok">Semua parameter normal</div>')
-                html('<div class="panel-j" style="margin-top:10px;font-size:13px;">Kejadian terakhir</div>')
-                html("".join(f'<div class="logi"><b>{e["Jam lokal"]}</b> {e["Kejadian"]}</div>'
+                html('<div class="panel-j" style="margin-top:8px;font-size:13px;">Kejadian terakhir</div>')
+                html("".join(f'<div class="logi"><b>{e["Jam lokal"]}</b>{e["Kejadian"]}</div>'
                              for e in reversed(s["log"][-5:])))
 
     panel_operasional()
 
 # ------------------------------------------------------------------------------
-# TAB 2 - ENERGI HIBRIDA
+# TAB - ENERGI HIBRIDA
 # ------------------------------------------------------------------------------
 with tab_energi:
     @st.fragment(run_every=interval)
     def panel_energi():
         sinkron()
         s = st.session_state.sim
+        r = ringkasan(s, kendali()["target_ka"])
         laju_bio = s["firing"] * Q_TUNGKU_MAKS_KW * 3.6 / (LHV_JERAMI * EFISIENSI_TUNGKU_HE)
         porsi_surya = 12.0 * s["iradiasi"] / 1000.0
         porsi_bio = max(0.0, s["t_masuk"] - s["t_amb"] - porsi_surya)
         total_naik = max(0.1, porsi_surya + porsi_bio)
-        html(f"""
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-j">Daya PLTS (4.000 Wp)</div>
-            <div class="kpi-n" style="color:#58a6ff">{f1(s['p_pv'], 0)} W</div>
-            <div class="kpi-s">iradiasi {f1(s['iradiasi'], 0)} W/m², {('cuaca ' + CUACA[s['cuaca']]['label'].lower()) if s['iradiasi'] > 0 else 'malam hari'}</div></div>
-          <div class="kpi"><div class="kpi-j">Baterai ({f1(BATERAI_KWH, 0)} kWh)</div>
-            <div class="kpi-n" style="color:{'#3fb950' if s['soc'] >= SOC_HEMAT else '#e5a43b'}">{f1(s['soc'], 0)} %</div>
-            <div class="kpi-s">mode energi: {s['mode_energi'].lower()}, suplai: {s['sumber_listrik']}</div></div>
-          <div class="kpi"><div class="kpi-j">Beban listrik</div>
-            <div class="kpi-n" style="color:#f1f3f7">{f1(s['p_beban'], 0)} W</div>
-            <div class="kpi-s">blower, IoT, lampu, fan tungku</div></div>
-          <div class="kpi"><div class="kpi-j">Tungku biomassa batang padi</div>
-            <div class="kpi-n" style="color:#ff7b72">{f1(laju_bio)} kg/jam</div>
-            <div class="kpi-s">total {f1(s['kg_biomassa'], 0)} kg, ruang bakar {f1(s['t_tungku'], 0)} °C</div></div>
-          <div class="kpi"><div class="kpi-j">Porsi kenaikan suhu udara</div>
-            <div class="kpi-n" style="color:#e5a43b">{porsi_surya / total_naik * 100:.0f}% surya</div>
-            <div class="kpi-s">{porsi_bio / total_naik * 100:.0f} % dari biomassa lewat penukar panas</div></div>
-        </div>""")
+        kondisi = ("cuaca " + CUACA[s["cuaca"]]["label"].lower()) if s["iradiasi"] > 0 else "malam hari"
+        baris_kpi(
+            kpi("Daya PLTS 4.000 Wp", f1(s["p_pv"], 0), "W", f"iradiasi {f1(s['iradiasi'], 0)} W/m², {kondisi}", "#58a6ff"),
+            kpi(f"Baterai {BATERAI_KWH:.0f} kWh", f1(s["soc"], 0), "%", f"suplai listrik: {s['sumber_listrik']}",
+                "#3fb950" if s["soc"] >= SOC_HEMAT else "#e5a43b"),
+            kpi("Beban listrik", f1(s["p_beban"], 0), "W", "blower, IoT, lampu, fan tungku"),
+            kpi("Konsumsi batang padi", f1(laju_bio), "kg/jam",
+                f"total {f1(s['kg_biomassa'], 0)} kg, tungku {f1(s['t_tungku'], 0)} °C", "#ff7b72"),
+            kpi("Panas dari surya", f"{porsi_surya / total_naik * 100:.0f}", "%",
+                f"{porsi_bio / total_naik * 100:.0f} % dari biomassa lewat penukar panas", "#e5a43b"),
+        )
         df = df_riwayat()
-        c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2, gap="medium")
         with c1:
-            st.markdown("##### Neraca listrik: PLTS vs beban, dan status baterai")
-            daya = df[["jam", "p_pv", "p_beban"]].melt("jam", var_name="seri", value_name="nilai")
-            daya["seri"] = daya["seri"].map({"p_pv": "Produksi PLTS (W)", "p_beban": "Beban (W)"})
-            skala_warna = alt.Scale(domain=["Produksi PLTS (W)", "Beban (W)", "SOC baterai (%)"],
-                                    range=["#58a6ff", "#c9ccd4", "#3fb950"])
-            g_daya = alt.Chart(daya).mark_line(strokeWidth=2).encode(
-                x=SUMBU_JAM, y=alt.Y("nilai:Q", title="Daya (W)", scale=alt.Scale(domain=[0, 3400])),
-                color=alt.Color("seri:N", title=None, scale=skala_warna, legend=None))
-            g_soc = alt.Chart(df.assign(seri="SOC baterai (%)")).mark_line(strokeDash=[5, 3], strokeWidth=2).encode(
-                x=SUMBU_JAM, y=alt.Y("soc:Q", title="SOC baterai (%)", scale=alt.Scale(domain=[0, 100])),
-                color=alt.Color("seri:N", title=None, scale=skala_warna, legend=None))
+            judul("Neraca listrik", "produksi PLTS, beban, dan baterai")
             legenda([("Produksi PLTS (W)", "#58a6ff", False), ("Beban (W)", "#c9ccd4", False),
                      ("SOC baterai (%)", "#3fb950", True)])
-            st.altair_chart(gaya(alt.layer(latar_cuaca(df), g_daya, g_soc).resolve_scale(y="independent", color="independent"), 260),
-                            width="stretch")
-            st.caption(f"Latar grafik: jingga cerah, abu-abu berawan, biru hujan, gelap malam. "
-                       f"Produksi PLTS {f1(s['kwh_pv'])} kWh, konsumsi {f1(s['kwh_beban'])} kWh, "
-                       f"cadangan jaringan {f1(s['kwh_grid'])} kWh.")
+            skala = alt.Scale(domain=["Produksi PLTS (W)", "Beban (W)", "SOC baterai (%)"],
+                              range=["#58a6ff", "#c9ccd4", "#3fb950"])
+            daya = df[["jam", "p_pv", "p_beban"]].melt("jam", var_name="seri", value_name="nilai")
+            daya["seri"] = daya["seri"].map({"p_pv": "Produksi PLTS (W)", "p_beban": "Beban (W)"})
+            g_daya = alt.Chart(daya).mark_line(strokeWidth=2).encode(
+                x=SUMBU_JAM, y=alt.Y("nilai:Q", title="Daya (W)", scale=alt.Scale(domain=[0, 3400])),
+                color=alt.Color("seri:N", scale=skala, legend=None))
+            g_soc = alt.Chart(df.assign(seri="SOC baterai (%)")).mark_line(strokeDash=[5, 3], strokeWidth=2).encode(
+                x=SUMBU_JAM, y=alt.Y("soc:Q", title="SOC baterai (%)", scale=alt.Scale(domain=[0, 100])),
+                color=alt.Color("seri:N", scale=skala, legend=None))
+            st.altair_chart(gaya(alt.layer(latar_cuaca(df), g_daya, g_soc)
+                                 .resolve_scale(y="independent", color="independent"), 250), width="stretch")
         with c2:
-            st.markdown("##### Panas: daya tungku dan suhu udara")
-            g_fir = alt.Chart(df).mark_area(opacity=0.30, color="#ff7b72").encode(
-                x=SUMBU_JAM, y=alt.Y("firing:Q", title="Daya tungku (%)",
-                                     scale=alt.Scale(domain=[0, 100])))
-            suhu = df[["jam", "t_masuk", "t_amb"]].melt("jam", var_name="seri", value_name="suhu")
-            suhu["seri"] = suhu["seri"].map({"t_masuk": "Udara masuk ruang (°C)", "t_amb": "Udara luar (°C)"})
-            g_suhu = alt.Chart(suhu).mark_line(strokeWidth=2).encode(
-                x=SUMBU_JAM, y=alt.Y("suhu:Q", title="Suhu (°C)", scale=alt.Scale(domain=[15, 60])),
-                color=alt.Color("seri:N", title=None,
-                                scale=alt.Scale(domain=["Udara masuk ruang (°C)", "Udara luar (°C)"],
-                                                range=["#d19a38", "#8890a1"]), legend=None))
+            judul("Panas pengeringan", "daya tungku dan suhu udara")
             legenda([("Udara masuk ruang (°C)", "#d19a38", False), ("Udara luar (°C)", "#8890a1", False),
                      ("Daya tungku (%)", "#ff7b72", False)])
-            st.altair_chart(gaya(alt.layer(latar_cuaca(df), g_fir, g_suhu).resolve_scale(y="independent", color="independent"), 260),
-                            width="stretch")
-            st.caption("Siang hari efek rumah kaca polikarbonat menaikkan suhu udara sehingga daya tungku turun; "
-                       "saat hujan dan malam, tungku biomassa mengambil alih.")
-        r = ringkasan(s, kendali()["target_ka"])
-        html(f"""<div class="catatan" style="margin-bottom:8px;">Batch ini sejauh ini: <b>listrik {f1(r['porsi_listrik_pv'], 0)} % dari PLTS</b>,
-        energi terbarukan (surya + biomassa) <b>{f1(r['porsi_terbarukan'], 1)} %</b> dari seluruh energi yang dipakai,
-        energi fosil {f1(100 - r['porsi_terbarukan'], 1)} %.</div>""")
-        html(f"""<div class="catatan">Pembagian peran energi: <b>panas</b> untuk pengeringan berasal dari efek rumah kaca
-        dan tungku biomassa batang padi melalui penukar panas (udara pengering tidak bercampur gas buang);
-        <b>listrik</b> untuk blower, sensor IoT, lampu dan fan tungku berasal dari PLTS dan baterai, dengan cadangan
-        jaringan (on-grid hybrid) bila baterai di bawah {SOC_GRID:.0f} %.</div>""")
+            g_fir = alt.Chart(df).mark_area(opacity=0.30, color="#ff7b72").encode(
+                x=SUMBU_JAM, y=alt.Y("firing:Q", title="Daya tungku (%)", scale=alt.Scale(domain=[0, 100])))
+            suhu = df[["jam", "t_masuk", "t_amb"]].melt("jam", var_name="seri", value_name="suhu")
+            suhu["seri"] = suhu["seri"].map({"t_masuk": "Udara masuk ruang", "t_amb": "Udara luar"})
+            g_suhu = alt.Chart(suhu).mark_line(strokeWidth=2).encode(
+                x=SUMBU_JAM, y=alt.Y("suhu:Q", title="Suhu (°C)", scale=alt.Scale(domain=[15, 60])),
+                color=alt.Color("seri:N", legend=None, scale=alt.Scale(domain=["Udara masuk ruang", "Udara luar"],
+                                                                        range=["#d19a38", "#8890a1"])))
+            st.altair_chart(gaya(alt.layer(latar_cuaca(df), g_fir, g_suhu)
+                                 .resolve_scale(y="independent", color="independent"), 250), width="stretch")
+        strip(("Produksi PLTS", f"{f1(s['kwh_pv'])} kWh"), ("Konsumsi listrik", f"{f1(s['kwh_beban'])} kWh"),
+              ("Dari jaringan", f"{f1(s['kwh_grid'])} kWh"), ("Listrik dari PLTS", f"{f1(r['porsi_listrik_pv'], 0)} %"),
+              ("Energi terbarukan", f"{f1(r['porsi_terbarukan'], 1)} %"))
+        html(f"""<div class="catatan">Latar grafik menunjukkan kondisi: jingga cerah, abu-abu berawan, biru hujan,
+        gelap malam. Panas pengeringan berasal dari efek rumah kaca atap polikarbonat dan tungku biomassa batang padi
+        melalui penukar panas, sehingga udara pengering tidak bercampur gas buang. Listrik untuk blower, sensor IoT,
+        lampu dan fan tungku berasal dari PLTS dan baterai; jaringan hanya menjadi cadangan bila baterai di bawah
+        {SOC_GRID:.0f} %.</div>""")
 
     panel_energi()
 
 # ------------------------------------------------------------------------------
-# TAB 3 - EMISI & KUALITAS UDARA
+# TAB - EMISI & KUALITAS UDARA
 # ------------------------------------------------------------------------------
 with tab_emisi:
     @st.fragment(run_every=interval)
@@ -1087,51 +1132,41 @@ with tab_emisi:
         rng = random.Random(int(s["jam"] * 50))
         co_ruang = 0.6 + rng.uniform(0, 0.6)
         pm_luar = 24 + rng.uniform(-3, 3)
-        html(f"""
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-j">CO gas buang (cerobong)</div>
-            <div class="kpi-n" style="color:{'#ff7b72' if s['co'] > AMBANG_CO else '#3fb950'}">{f1(s['co'], 0)}</div>
-            <div class="kpi-s">mg/Nm³, ambang alarm {AMBANG_CO:.0f}</div></div>
-          <div class="kpi"><div class="kpi-j">Partikulat setelah filter kasar + HEPA</div>
-            <div class="kpi-n" style="color:{'#ff7b72' if s['pm'] > AMBANG_PM else '#3fb950'}">{f1(s['pm'])}</div>
-            <div class="kpi-s">mg/Nm³, ambang alarm {AMBANG_PM:.0f}</div></div>
-          <div class="kpi"><div class="kpi-j">Beda tekanan filter</div>
-            <div class="kpi-n" style="color:{'#e5a43b' if s['dp_filter'] > AMBANG_DP_FILTER else '#f1f3f7'}">{f1(s['dp_filter'], 0)} Pa</div>
-            <div class="kpi-s">naik seiring biomassa terbakar; bersihkan > {AMBANG_DP_FILTER:.0f} Pa</div></div>
-          <div class="kpi"><div class="kpi-j">Efektivitas penukar panas</div>
-            <div class="kpi-n" style="color:#f1f3f7">{f1(s['eff_he'] * 100, 0)} %</div>
-            <div class="kpi-s">gas masuk {f1(s['t_gas_he'], 0)} °C, keluar cerobong {f1(s['t_cerobong'], 0)} °C</div></div>
-          <div class="kpi"><div class="kpi-j">CO udara di ruang pengering</div>
-            <div class="kpi-n" style="color:#3fb950">{f1(co_ruang)} ppm</div>
-            <div class="kpi-s">setara udara luar - gabah tidak kontak gas buang</div></div>
-        </div>""")
+        baris_kpi(
+            kpi("CO gas buang", f1(s["co"], 0), "mg/Nm³", f"ambang alarm {AMBANG_CO:.0f} mg/Nm³",
+                "#ff7b72" if s["co"] > AMBANG_CO else "#3fb950"),
+            kpi("Partikulat gas buang", f1(s["pm"]), "mg/Nm³", f"setelah filter kasar & HEPA, ambang {AMBANG_PM:.0f}",
+                "#ff7b72" if s["pm"] > AMBANG_PM else "#3fb950"),
+            kpi("Beda tekanan filter", f1(s["dp_filter"], 0), "Pa", f"bersihkan bila di atas {AMBANG_DP_FILTER:.0f} Pa",
+                "#e5a43b" if s["dp_filter"] > AMBANG_DP_FILTER else "#f1f3f7"),
+            kpi("Efektivitas penukar panas", f1(s["eff_he"] * 100, 0), "%",
+                f"gas {f1(s['t_gas_he'], 0)} °C, cerobong {f1(s['t_cerobong'], 0)} °C"),
+            kpi("CO di ruang pengering", f1(co_ruang), "ppm", "setara udara luar, tanpa gas buang", "#3fb950"),
+        )
         df = df_riwayat()
-        c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2, gap="medium")
         with c1:
-            st.markdown("##### CO gas buang")
-            g = alt.layer(
-                alt.Chart(df).mark_line(color="#e5a43b", strokeWidth=2).encode(
-                    x=SUMBU_JAM, y=alt.Y("co:Q", title="mg/Nm³", scale=alt.Scale(domain=[0, 700]))),
-                alt.Chart(pd.DataFrame({"y": [AMBANG_CO]})).mark_rule(strokeDash=[5, 4], color="#ff7b72").encode(y="y:Q"))
-            st.altair_chart(gaya(g, 210), width="stretch")
+            judul("CO gas buang", "mg/Nm³")
+            g = alt.layer(alt.Chart(df).mark_line(color="#e5a43b", strokeWidth=2).encode(
+                x=SUMBU_JAM, y=alt.Y("co:Q", title="CO (mg/Nm³)", scale=alt.Scale(domain=[0, 700]))),
+                *garis_acuan(AMBANG_CO, f"Ambang {AMBANG_CO:.0f}", "#ff7b72"))
+            st.altair_chart(gaya(g, 220), width="stretch")
         with c2:
-            st.markdown("##### Partikulat gas buang setelah filter")
-            g = alt.layer(
-                alt.Chart(df).mark_line(color="#58a6ff", strokeWidth=2).encode(
-                    x=SUMBU_JAM, y=alt.Y("pm:Q", title="mg/Nm³", scale=alt.Scale(domain=[0, 60]))),
-                alt.Chart(pd.DataFrame({"y": [AMBANG_PM]})).mark_rule(strokeDash=[5, 4], color="#ff7b72").encode(y="y:Q"))
-            st.altair_chart(gaya(g, 210), width="stretch")
-        html(f"""<div class="catatan">Kualitas udara masuk: PM2.5 ±{f1(pm_luar, 0)} µg/m³.
-        Estimasi emisi CO₂ fosil yang dihindari batch ini: <b>{f1(r['co2_dihindari'], 0)} kg CO₂</b>
-        (panas biomassa dibandingkan pengering LPG, listrik PLTS dibandingkan faktor emisi jaringan 0,87 kg/kWh).
-        Ambang alarm adalah setelan internal; sesuaikan dengan baku mutu emisi yang berlaku
-        (Permen LHK P.11/2021) setelah uji emisi lapangan.</div>""")
+            judul("Partikulat gas buang setelah filter", "mg/Nm³")
+            g = alt.layer(alt.Chart(df).mark_line(color="#58a6ff", strokeWidth=2).encode(
+                x=SUMBU_JAM, y=alt.Y("pm:Q", title="Partikulat (mg/Nm³)", scale=alt.Scale(domain=[0, 60]))),
+                *garis_acuan(AMBANG_PM, f"Ambang {AMBANG_PM:.0f}", "#ff7b72"))
+            st.altair_chart(gaya(g, 220), width="stretch")
+        strip(("PM2.5 udara masuk", f"±{f1(pm_luar, 0)} µg/m³"), ("CO₂ fosil dihindari", f"{f1(r['co2_dihindari'], 0)} kg"),
+              ("Biomassa terpakai", f"{f1(s['kg_biomassa'], 0)} kg"))
+        html("""<div class="catatan">Ambang alarm adalah setelan internal dan disesuaikan dengan baku mutu emisi
+        sumber tidak bergerak (Permen LHK P.11/2021) setelah uji emisi lapangan. CO₂ dihindari dihitung dari panas
+        biomassa dibanding pengering LPG, dan listrik PLTS dibanding jaringan (0,87 kg CO₂/kWh).</div>""")
 
     panel_emisi()
 
-
 # ------------------------------------------------------------------------------
-# TAB 4 - DIAGRAM ALIR PROSES (HMI)
+# TAB - DIAGRAM ALIR PROSES
 # ------------------------------------------------------------------------------
 def svg_hmi(s, k):
     """Diagram alir hidup. Hanya angka & kelas yang berubah tiap detik, sehingga animasi CSS
@@ -1174,7 +1209,7 @@ def svg_hmi(s, k):
                 f'<text x="600" y="{y + 18}" fill="#e2e4e9" font-size="11.5" font-weight="700">{NAMA_ZONA[z]} (Zona {NOMOR_ZONA[z]})</text>'
                 f'<text x="600" y="{y + 37}" fill="{w}" font-size="13" font-weight="700">KA {f1(db_ke_wb(d["ka_db"]))} %</text>'
                 f'<text x="752" y="{y + 37}" fill="#c9ccd4" font-size="10.5" text-anchor="end">{f1(d["suhu"])} °C  RH {f1(d["rh"], 0)} %</text>'
-                f'<text x="600" y="{y + 51}" fill="#697184" font-size="9.5">{d["status"]}</text>')
+                f'<text x="600" y="{y + 51}" fill="#697184" font-size="10">{d["status"]}</text>')
 
     api = ""
     if api_on:
@@ -1197,12 +1232,12 @@ def svg_hmi(s, k):
 {aliran("M218 250 L218 70 L345 70 L345 250 L445 250 L445 280 L365 280 L365 310 L445 310 L445 340 L365 340 L365 370 L465 370 L465 152", WF, k_gas, panah=False)}
 {aliran("M465 150 L465 58", WB, k_gas)}
 <text x="478" y="38" fill="{WB}" font-size="10.5" font-weight="600">Gas buang: CO {f1(s['co'], 0)} mg/Nm³, PM {f1(s['pm'])} mg/Nm³</text>
-<text x="478" y="52" fill="#697184" font-size="9.5">sensor kualitas udara buang, cerobong {f1(s['t_cerobong'], 0)} °C</text>
+<text x="478" y="52" fill="#697184" font-size="10">sensor kualitas udara buang, cerobong {f1(s['t_cerobong'], 0)} °C</text>
 
 <!-- aliran udara: udara luar -> penukar panas -> blower -> plenum rumah pengering -->
 {aliran("M290 556 L405 556 L405 424", WU, k_udara)}
 <text x="282" y="552" fill="#8890a1" font-size="10" text-anchor="end">Udara luar {f1(s['t_amb'])} °C, RH {f1(s['rh_amb'], 0)} %</text>
-<text x="282" y="566" fill="#697184" font-size="9.5" text-anchor="end">sensor kualitas udara masuk</text>
+<text x="282" y="566" fill="#697184" font-size="10" text-anchor="end">sensor kualitas udara masuk</text>
 {aliran("M482 396 L522 396 L522 522 L557 522", WP, k_udara)}
 <text x="490" y="388" fill="{WP if kipas_on else '#697184'}" font-size="11" font-weight="700">{f1(s['t_masuk'])} °C</text>
 <circle cx="522" cy="462" r="17" fill="#12141c" stroke="{WP if kipas_on else '#3a4052'}" stroke-width="2"/>
@@ -1226,7 +1261,7 @@ def svg_hmi(s, k):
 <text x="258" y="351" fill="{WF}" font-size="10" font-weight="600" text-anchor="middle">Filter kasar</text>
 <rect x="200" y="252" width="90" height="44" fill="#232838" stroke="#333a4d"/>
 <text x="258" y="270" fill="{WB}" font-size="10" font-weight="600" text-anchor="middle">Filter halus</text>
-<text x="258" y="285" fill="{WB}" font-size="9.5" text-anchor="middle">HEPA &amp; gas</text>
+<text x="258" y="285" fill="{WB}" font-size="10" text-anchor="middle">HEPA &amp; gas</text>
 <text x="258" y="232" fill="#c9ccd4" font-size="10" text-anchor="middle">ΔP {f1(s['dp_filter'], 0)} Pa</text>
 <text x="258" y="440" fill="#8890a1" font-size="10" text-anchor="middle">gas panas</text>
 <text x="258" y="454" fill="#8890a1" font-size="10" text-anchor="middle">naik</text>
@@ -1237,9 +1272,9 @@ def svg_hmi(s, k):
 <text x="405" y="170" fill="{WB}" font-size="11" font-weight="700" text-anchor="middle">Penukar panas</text>
 <text x="405" y="184" fill="{WB}" font-size="11" font-weight="700" text-anchor="middle">hibrida</text>
 <text x="405" y="208" fill="#e2e4e9" font-size="12.5" font-weight="700" text-anchor="middle">{f1(s['eff_he'] * 100, 0)} %</text>
-<text x="405" y="222" fill="#8890a1" font-size="9.5" text-anchor="middle">efektivitas</text>
-<text x="405" y="238" fill="#c9ccd4" font-size="9.5" text-anchor="middle">gas masuk {f1(s['t_gas_he'], 0)} °C</text>
-<text x="405" y="404" fill="#8890a1" font-size="9.5" text-anchor="middle">udara bersih ↑ dipanaskan</text>
+<text x="405" y="222" fill="#8890a1" font-size="10" text-anchor="middle">efektivitas</text>
+<text x="405" y="238" fill="#c9ccd4" font-size="10" text-anchor="middle">gas masuk {f1(s['t_gas_he'], 0)} °C</text>
+<text x="405" y="404" fill="#8890a1" font-size="10" text-anchor="middle">udara bersih ↑ dipanaskan</text>
 
 <!-- rumah pengering -->
 <path d="M560 126 L675 84 L790 126" stroke="{WU}" stroke-width="1.6" fill="none" opacity="0.8"/>
@@ -1299,25 +1334,23 @@ LEGENDA_HMI = [("Gas panas dari tungku", "#e8743b"), ("Gas tersaring", "#d19a38"
                ("Data sensor", "#b392f0"), ("Batang padi", "#a47148")]
 
 
+
 with tab_hmi:
     @st.fragment(run_every=interval)
     def panel_hmi():
         sinkron()
         s = st.session_state.sim
-        html('<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#c9ccd4;margin:0 0 8px 0;">'
-             + "".join(f'<span><i style="display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;'
-                       f'background:repeating-linear-gradient(90deg,{w} 0 6px,transparent 6px 10px);"></i>{t}</span>'
-                       for t, w in LEGENDA_HMI) + '</div>')
+        legenda([(t, w, True) for t, w in LEGENDA_HMI])
         kelas = "hmi" if st.session_state.berjalan else "hmi jeda"
         st.markdown(f'<div class="{kelas}">' + " ".join(svg_hmi(s, kendali()).split("\n")) + "</div>",
                     unsafe_allow_html=True)
-        st.caption("Garis putus-putus bergerak searah aliran; makin cepat berarti makin besar laju gas, udara, atau "
-                   "listrik. Abu-abu berarti aliran berhenti. Animasi berhenti saat demo dijeda.")
+        html('<div class="catatan" style="margin-top:6px;">Garis putus-putus bergerak searah aliran; makin cepat berarti '
+             'makin besar laju gas, udara, atau listrik. Abu-abu berarti aliran berhenti. Animasi berhenti saat demo dijeda.</div>')
 
     panel_hmi()
 
 # ------------------------------------------------------------------------------
-# TAB 5 - LOG & EKSPOR
+# TAB - LOG & EKSPOR
 # ------------------------------------------------------------------------------
 with tab_log:
     @st.fragment(run_every=interval)
@@ -1327,53 +1360,54 @@ with tab_log:
         k = kendali()
         r = ringkasan(s, k["target_ka"])
         if s["fase_akhir"] == "berhenti":
-            st.success(f"Batch selesai dalam {f1(s['jam_selesai_batch'])} jam proses "
-                       f"(pukul {format_jam(JAM_MULAI + s['jam_selesai_batch'])}).")
-            rows = [{"Parameter": f"KA akhir {NAMA_ZONA[z]}",
-                     "Nilai": f"{f1(db_ke_wb(s['zona'][z]['ka_db']))} % (jam ke-{f1(s['zona'][z]['jam_selesai'])})"}
-                    for z in URUTAN_TAMPIL]
-            rows += [
-                {"Parameter": "Air diuapkan", "Nilai": f"{f1(r['air_menguap'], 0)} kg"},
-                {"Parameter": "Gabah kering", "Nilai": f"{f1(r['massa'], 0)} kg"},
-                {"Parameter": "Biomassa batang padi terpakai", "Nilai": f"{f1(s['kg_biomassa'], 0)} kg"},
-                {"Parameter": "Energi panas ke udara", "Nilai": f"{f1(s['mj_panas'], 0)} MJ "
-                                                                  f"({f1(s['mj_panas'] / max(1, r['air_menguap']))} MJ/kg air)"},
-                {"Parameter": "Listrik PLTS / konsumsi / jaringan",
-                 "Nilai": f"{f1(s['kwh_pv'])} / {f1(s['kwh_beban'])} / {f1(s['kwh_grid'])} kWh"},
-                {"Parameter": "Porsi energi terbarukan / listrik dari PLTS",
-                 "Nilai": f"{f1(r['porsi_terbarukan'], 1)} % / {f1(r['porsi_listrik_pv'], 0)} %"},
-                {"Parameter": "Estimasi CO₂ fosil dihindari", "Nilai": f"{f1(r['co2_dihindari'], 0)} kg"},
-            ]
-            st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+            html(f'<div class="banner ok">Batch selesai dalam <b>{f1(s["jam_selesai_batch"])} jam proses</b> '
+                 f'(pukul {format_jam(JAM_MULAI + s["jam_selesai_batch"])}). Seluruh rak memenuhi target '
+                 f'{f1(k["target_ka"])} %.</div>')
+            baris_kpi(
+                kpi("Air diuapkan", f1(r["air_menguap"], 0), "kg", f"gabah kering {f1(r['massa'], 0)} kg", "#58a6ff"),
+                kpi("Batang padi terpakai", f1(s["kg_biomassa"], 0), "kg",
+                    f"{f1(s['mj_panas'] / max(1, r['air_menguap']))} MJ per kg air", "#ff7b72"),
+                kpi("Listrik PLTS", f1(s["kwh_pv"]), "kWh",
+                    f"konsumsi {f1(s['kwh_beban'])} kWh, jaringan {f1(s['kwh_grid'])} kWh", "#f2cc60"),
+                kpi("Energi terbarukan", f1(r["porsi_terbarukan"], 1), "%",
+                    f"listrik dari PLTS {f1(r['porsi_listrik_pv'], 0)} %", "#3fb950"),
+                kpi("CO₂ fosil dihindari", f1(r["co2_dihindari"], 0), "kg", "dibanding pengering LPG & listrik jaringan"),
+            )
+            strip(*[(f"KA akhir {NAMA_ZONA[z]}",
+                     f"{f1(db_ke_wb(s['zona'][z]['ka_db']))} % (jam ke-{f1(s['zona'][z]['jam_selesai'])})")
+                    for z in URUTAN_TAMPIL])
         else:
-            st.info("Ringkasan batch muncul otomatis setelah seluruh rak mencapai target.")
+            html('<div class="banner info">Ringkasan batch muncul otomatis setelah seluruh rak mencapai target.</div>')
 
-        st.markdown("##### Log kejadian")
-        log = pd.DataFrame(s["log"][::-1])
-        log["Jam proses"] = log["Jam proses"].map(lambda x: f1(x, 2))
-        st.dataframe(log, hide_index=True, width="stretch", height=300)
+        judul("Log kejadian", f"{len(s['log'])} kejadian, terbaru di atas")
+        baris = "".join(
+            f'<tr><td class="num">{f1(e["Jam proses"], 2)}</td><td class="num">{e["Jam lokal"]}</td>'
+            f'<td><span class="pill {e["Tingkat"]}">{e["Tingkat"]}</span></td><td>{e["Kejadian"]}</td></tr>'
+            for e in reversed(s["log"]))
+        html('<div class="tabel-log"><table><thead><tr><th>Jam proses</th><th>Pukul</th><th>Tingkat</th>'
+             f'<th>Kejadian</th></tr></thead><tbody>{baris}</tbody></table></div>')
 
         df = df_riwayat()
-        e1, e2 = st.columns(2)
+        log = pd.DataFrame(s["log"])
+        judul("Ekspor data")
+        e1, e2, _ = st.columns([1, 1, 1.4], gap="small")
         with e1:
             st.download_button("Unduh telemetri batch (.csv)", df.to_csv(index=False).encode("utf-8"),
-                               file_name="sipadi_telemetri_batch_1ton.csv", mime="text/csv",
-                               width="stretch")
+                               file_name="sipadi_telemetri_batch_1ton.csv", mime="text/csv", width="stretch")
         with e2:
             st.download_button("Unduh log kejadian (.csv)", log.to_csv(index=False).encode("utf-8"),
-                               file_name="sipadi_log_kejadian.csv", mime="text/csv",
-                               width="stretch")
-        st.caption("Telemetri direkam tiap 0,1 jam proses (6 menit) untuk ketiga rak, energi, dan emisi.")
+                               file_name="sipadi_log_kejadian.csv", mime="text/csv", width="stretch")
+        html('<div class="catatan">Telemetri direkam tiap 0,1 jam proses (6 menit) untuk ketiga rak, energi, dan emisi.</div>')
 
     panel_log()
 
 # ------------------------------------------------------------------------------
-# TAB 6 - SPESIFIKASI & RAB (statis)
+# TAB - SPESIFIKASI & RAB (statis)
 # ------------------------------------------------------------------------------
 with tab_spek:
-    st.markdown("### Spesifikasi teknik")
+    judul("Spesifikasi teknik")
     st.table(pd.DataFrame([
-        ["Dimensi/kapasitas", "Rumah pengering ±6 m × 4 m × 3 m, kapasitas ±1 ton gabah basah per siklus"],
+        ["Dimensi & kapasitas", "Rumah pengering ±6 m × 4 m × 3 m, kapasitas ±1 ton gabah basah per siklus"],
         ["Sumber listrik", "PLTS on-grid/off-grid hybrid ±4.000 Wp dengan baterai penyimpanan sebagai cadangan"],
         ["Sumber panas", "Tungku biomassa limbah batang padi → heat riser → filter kasar & HEPA → penukar panas hibrida → udara bersih ke ruang"],
         ["Beban listrik PLTS", "Blower, lampu, pembakar, sensor & sistem IoT"],
@@ -1387,7 +1421,6 @@ with tab_spek:
         ["Pengendalian emisi", "Baku mutu emisi sumber tidak bergerak, Permen LHK P.11/2021; pemeriksaan berkala"],
     ], columns=["Parameter", "Keterangan"]).set_index("Parameter"))
 
-    st.markdown("### Rencana anggaran biaya - total Rp 220.000.000")
     rab = pd.DataFrame([
         ["A. Peralatan/bahan utama", "Kolektor surya", "2 unit", 20_000_000],
         ["A. Peralatan/bahan utama", "Pompa", "2 unit", 10_000_000],
@@ -1401,7 +1434,7 @@ with tab_spek:
         ["B. Instalasi/konstruksi", "Pondasi & struktur rumah pengering", "1 paket", 20_000_000],
         ["B. Instalasi/konstruksi", "Instalasi kelistrikan PLTS & sistem IoT", "1 paket", 10_000_000],
         ["B. Instalasi/konstruksi", "Sirkulasi udara & ducting", "1 paket", 8_000_000],
-        ["C. Tenaga kerja/jasa", "Tukang & instalatur (60 HOK)", "60 HOK", 9_000_000],
+        ["C. Tenaga kerja/jasa", "Tukang & instalatur", "60 HOK", 9_000_000],
         ["C. Tenaga kerja/jasa", "Programmer IoT & integrasi sistem", "1 paket", 8_000_000],
         ["C. Tenaga kerja/jasa", "Desain teknis & pengawasan", "1 paket", 5_000_000],
         ["D. Uji coba & kalibrasi", "Uji fungsi pengering (3 siklus)", "1 paket", 6_000_000],
@@ -1419,25 +1452,28 @@ with tab_spek:
         ["E. Lain-lain", "Monev pascaimplementasi", "1 paket", 6_000_000],
     ], columns=["Kelompok", "Komponen", "Volume", "Jumlah (Rp)"])
     total_rab = rab["Jumlah (Rp)"].sum()
-    kelompok_slide = {"A. Peralatan/bahan utama": "Alat & konstruksi", "B. Instalasi/konstruksi": "Alat & konstruksi",
-                      "C. Tenaga kerja/jasa": "Jasa & uji coba", "D. Uji coba & kalibrasi": "Jasa & uji coba",
-                      "E. Lain-lain": "Pelatihan, survei & monev"}
-    ringkas = (rab.assign(Pos=rab["Kelompok"].map(kelompok_slide))
-               .groupby("Pos", as_index=False, sort=False)["Jumlah (Rp)"].sum())
-    ringkas["Porsi"] = (ringkas["Jumlah (Rp)"] / total_rab * 100).map(lambda x: f1(x) + " %")
-    c1, c2 = st.columns([1, 1.4])
+    pos = {"Alat & konstruksi": ("#d19a38", ["A. Peralatan/bahan utama", "B. Instalasi/konstruksi"]),
+           "Jasa & uji coba": ("#58a6ff", ["C. Tenaga kerja/jasa", "D. Uji coba & kalibrasi"]),
+           "Pelatihan, survei & monev": ("#3fb950", ["E. Lain-lain"])}
+    judul("Rencana anggaran biaya", f"total Rp {f1(total_rab, 0)}")
+    c1, c2 = st.columns([1, 1.3], gap="large")
     with c1:
-        st.dataframe(ringkas.style.format({"Jumlah (Rp)": lambda x: "Rp " + f1(x, 0)}), hide_index=True, width="stretch")
-        st.caption(f"Total Rp {f1(total_rab, 0)}. "
-                   "Mitra: Pusat Organik PUSAKA BLORA dan PT Pertamina EP Cepu Field Cepu.")
+        nilai = {n: rab[rab["Kelompok"].isin(g)]["Jumlah (Rp)"].sum() for n, (_, g) in pos.items()}
+        html('<div class="rab-bar">' + "".join(
+            f'<div style="width:{v / total_rab * 100:.1f}%;background:{pos[n][0]}"></div>' for n, v in nilai.items())
+             + "</div>" + "".join(
+            f'<div class="rab-item"><span><i style="background:{pos[n][0]}"></i>{n}</span>'
+            f'<b>Rp {f1(v, 0)} ({f1(v / total_rab * 100)} %)</b></div>' for n, v in nilai.items()))
+        html('<div class="catatan" style="margin-top:8px;">Mitra: Pusat Organik PUSAKA BLORA dan '
+             'PT Pertamina EP Cepu Field Cepu.</div>')
     with c2:
         with st.expander("Rincian 28 butir RAB"):
             st.dataframe(rab.style.format({"Jumlah (Rp)": lambda x: "Rp " + f1(x, 0)}), hide_index=True, width="stretch")
 
-    st.markdown("### Sensor pada skema integrasi dan panel yang menampilkannya")
+    judul("Sensor dan panel yang menampilkannya")
     st.table(pd.DataFrame([
-        ["Sensor suhu & kelembapan (T&RH) per rak", "Panel operasional - kabinet rak, grafik suhu & RH"],
-        ["Sensor kadar air gabah (MC)", "Panel operasional - kinetika pengeringan"],
+        ["Sensor suhu & kelembapan (T&RH) per rak", "Panel operasional: kabinet rak, grafik suhu & RH"],
+        ["Sensor kadar air gabah (MC)", "Panel operasional: kinetika pengeringan"],
         ["Sensor suhu ruang bakar", "Energi hibrida, diagram alir"],
         ["Sensor suhu & efisiensi penukar panas", "Emisi & kualitas udara, diagram alir"],
         ["Sensor kualitas udara buang", "Emisi & kualitas udara (CO, partikulat)"],
@@ -1445,15 +1481,14 @@ with tab_spek:
         ["Monitoring energi PLTS & baterai", "Energi hibrida, diagram alir"],
     ], columns=["Sensor", "Ditampilkan di"]).set_index("Sensor"))
 
-    st.markdown("### Asumsi model simulasi demo")
-    st.caption("Angka-angka berikut adalah asumsi yang dipakai untuk simulasi demo.")
+    judul("Asumsi model simulasi demo", "angka yang dipakai khusus untuk simulasi")
     st.table(pd.DataFrame([
         ["Skala waktu", "4 menit demo = 24 jam proses (10 detik = 1 jam, 1 detik = 6 menit)"],
         ["Jumlah titik sensor rak", "3 zona (rak atas, tengah, bawah) untuk memantau keseragaman pengeringan"],
         ["Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah), laju bergantung suhu & aliran udara; dikalibrasi ke hasil uji lapangan (KA 27,72 % menjadi 14 % dalam 24 jam)"],
         ["Hasil kalibrasi", "Skenario standar: Rak Bawah ±17 jam, Rak Tengah ±20 jam, Rak Atas ±22 jam"],
-        ["Kendali suhu", "PI pada daya tungku, setpoint bawaan 45 °C; alarm bila suhu rak > 50 °C; interlock tungku bila blower mati"],
-        ["Blower", f"2 unit DC (jumlah sesuai RAB), total {P_BLOWER_MAKS_W:.0f} W; mode hemat 70 % bila baterai < {SOC_HEMAT:.0f} %"],
+        ["Kendali suhu", "PI pada daya tungku, setpoint bawaan 45 °C; alarm bila suhu rak di atas 50 °C; interlock tungku bila blower mati"],
+        ["Blower", f"2 unit DC, total {P_BLOWER_MAKS_W:.0f} W; mode hemat 70 % bila baterai di bawah {SOC_HEMAT:.0f} %"],
         ["Baterai", f"{BATERAI_KWH:.0f} kWh (LiFePO4 48 V 200 Ah), SOC awal {SOC_AWAL:.0f} %"],
         ["Tungku biomassa", f"kalor maks {Q_TUNGKU_MAKS_KW:.0f} kW ke udara, nilai kalor batang padi {LHV_JERAMI:.0f} MJ/kg, efisiensi tungku + penukar panas {EFISIENSI_TUNGKU_HE * 100:.0f} %"],
         ["Penukar panas", "Efektivitas 73-83 %, turun sedikit saat daya tungku tinggi"],
@@ -1461,19 +1496,19 @@ with tab_spek:
         ["Ambang alarm emisi", f"CO {AMBANG_CO:.0f} mg/Nm³, partikulat {AMBANG_PM:.0f} mg/Nm³, beda tekanan filter {AMBANG_DP_FILTER:.0f} Pa (setelan internal)"],
         ["Pembanding CO₂", "Panas biomassa dibanding pengering LPG (46 MJ/kg, efisiensi 85 %, 2,98 kg CO₂/kg); listrik PLTS dibanding jaringan 0,87 kg CO₂/kWh"],
     ], columns=["Aspek", "Nilai yang dipakai"]).set_index("Aspek"))
-    st.caption("Angka di atas adalah asumsi demo, bukan data pengukuran. Ganti dengan data lapangan "
-               "setelah uji kinerja (timeline bulan 4-9).")
+    html('<div class="catatan">Angka di atas adalah asumsi demo, bukan data pengukuran, dan akan diganti dengan '
+         'data lapangan setelah uji kinerja.</div>')
 
 # ==============================================================================
 # FOOTER
 # ==============================================================================
 st.markdown("---")
 html("""
-<div style="text-align:center;color:#697184;font-size:12px;line-height:1.7;">
-<b style="color:#9299a8;">SI-PADI: Pengering Padi Surya Terintegrasi IoT</b><br>
+<div class="footer">
+<b>SI-PADI: Pengering Padi Surya Terintegrasi IoT</b><br>
 Kompetisi Inovasi Teknologi dan Energi, Program PFsains Pertamina Foundation 2026<br>
 Ketua: Prof. Dr. Ir. Widayat, S.T., M.T., IPM., ASEAN Eng. (Universitas Diponegoro)<br>
-Tim: Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T. · Hasan Mustafa Widayat, S.T. · Dr. Norman Iskandar, S.T., M.T.<br>
-Mitra: Pusat Organik PUSAKA BLORA · PT Pertamina EP Cepu Field Cepu
+Tim: Ir. Ali Mutakin, S.Kom., Yusron Mahendra Diwiyanto, S.T., Hasan Mustafa Widayat, S.T., Dr. Norman Iskandar, S.T., M.T.<br>
+Mitra: Pusat Organik PUSAKA BLORA dan PT Pertamina EP Cepu Field Cepu
 </div>
 """)
