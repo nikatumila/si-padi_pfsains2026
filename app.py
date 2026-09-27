@@ -106,7 +106,7 @@ kondisi_cuaca = st.sidebar.selectbox(
 
 target_kadar_air = st.sidebar.slider("Target Akhir Kadar Air Gabah (%)", 12.0, 16.0, 14.0, step=0.5)
 suhu_setpoint = st.sidebar.slider("Setpoint Suhu Ruang Pengering (°C)", 35, 60, 50)
-kapasitas_gabah = st.sidebar.selectbox("Muatan Gabah Basah:", ["500 kg", "1000 kg (1 Ton - Full Batch)"])
+kapasitas_gabah = st.sidebar.selectbox("Muatan Gabah Basah:", ["500 kg", "1000 kg (1 Ton)"])
 
 col_btn1, col_btn2 = st.sidebar.columns(2)
 with col_btn1:
