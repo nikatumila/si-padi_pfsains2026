@@ -4,7 +4,7 @@ import numpy as np
 
 # --- 1. KONFIGURASI HALAMAN INDUSTRIAL DARK ---
 st.set_page_config(
-    page_title="SI-PADI—Pusat Kendali & Pemantauan IoT",
+    page_title="SI-PADI — Pusat Kendali & Pemantauan IoT",
     page_icon="🌾",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -270,7 +270,7 @@ with tab_dash:
             mime="text/csv"
         )
     else:
-        st.info("💡 Tekan tombol **'⏱️ +1 Jam Proses'** pada panel sidebar sebelah kiri untuk melihat simulasi dinamis grafik penurunan kadar air.")
+        st.info("💡 Tekan tombol '⏱️ +1 Jam Proses' pada panel sidebar sebelah kiri untuk melihat simulasi dinamis grafik penurunan kadar air.")
 
 # ====================================================================
 # TAB 2: HMI DIGITAL TWIN (GAMBAR 1 PROPOSAL)
@@ -358,18 +358,18 @@ with tab_spek:
     with col_t1:
         st.markdown("""
         **Spesifikasi Fisik & Kapasitas:**
-        - **Dimensi Rumah Pengering:** $\\pm 6\\text{ m} \\times 4\\text{ m} \\times 3\\text{ m}$[cite: 11]
-        - **Kapasitas Batch:** $\\pm 1\\text{ Ton}$ gabah segar per siklus pengeringan (18–24 jam)[cite: 11]
-        - **Material:** Rangka baja ringan galvanis, dinding polikarbonat UV-protected, lantai stainless steel[cite: 11]
-        - **Tingkat Kesiapan Teknologi:** TKT 6–7 (Prototipe teruji di lingkungan operasional nyata)[cite: 11]
+        - **Dimensi Rumah Pengering:** $\\pm 6\\text{ m} \\times 4\\text{ m} \\times 3\\text{ m}$
+        - **Kapasitas Batch:** $\\pm 1\\text{ Ton}$ gabah segar per siklus pengeringan (18–24 jam)
+        - **Material:** Rangka baja ringan galvanis, dinding polikarbonat UV-protected, lantai stainless steel
+        - **Tingkat Kesiapan Teknologi:** TKT 6–7 (Prototipe teruji di lingkungan operasional nyata)
         """)
     with col_t2:
         st.markdown("""
         **Kemitraan & Standar:**
-        - **Lokasi Implementasi:** Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora[cite: 11]
-        - **Dukungan Kemitraan:** PT Pertamina EP Cepu Field Cepu & Pertamina Foundation[cite: 11]
-        - **Standar Output:** SNI 6128:2020 (Kadar air aman simpan $\\leq 14\\%$)[cite: 11]
-        - **SOP Perawatan:** Pembersihan panel berkala, kalibrasi sensor per 6 bulan[cite: 11]
+        - **Lokasi Implementasi:** Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora
+        - **Dukungan Kemitraan:** PT Pertamina EP Cepu Field Cepu & Pertamina Foundation
+        - **Standar Output:** SNI 6128:2020 (Kadar air aman simpan $\\leq 14\\%$)
+        - **SOP Perawatan:** Pembersihan panel berkala, kalibrasi sensor per 6 bulan
         """)
 
 # ====================================================================
@@ -377,7 +377,7 @@ with tab_spek:
 # ====================================================================
 with tab_ekonomi:
     st.markdown("### 💰 Analisis Kelayakan Finansial & Tekno-Ekonomi")
-    st.caption("Parameter kelayakan investasi alat pengering SI-PADI berdasarkan Bab 3.2 Proposal (Diskonto 12%, Umur Alat 10 Tahun)[cite: 11]")
+    st.caption("Parameter kelayakan investasi alat pengering SI-PADI berdasarkan Bab 3.2 Proposal (Diskonto 12%, Umur Alat 10 Tahun)")
     
     e1, e2, e3, e4 = st.columns(4)
     with e1:
@@ -411,19 +411,19 @@ with tab_ekonomi:
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
-    - **Harga Gabah Segar (Input):** USD 0,36 / kg[cite: 11]
-    - **Harga Gabah Kering (Output):** USD 0,48 / kg[cite: 11]
-    - **Evaluasi Keekonomian:** Investasi dinyatakan **sangat layak (feasible)** karena periode pengembalian modal (1,6 tahun) jauh lebih singkat dibandingkan estimasi umur ekonomis alat (10 tahun)[cite: 11].
-    - **Dampak Karbon (ESG):** Pemanfaatan biomassa limbah batang padi bersifat netral karbon (*carbon-neutral*), sementara emisi gas buangnya diserap (*bio-capture*) oleh kolam mikroalga[cite: 11].
+    - **Harga Gabah Segar (Input):** USD 0,36 / kg
+    - **Harga Gabah Kering (Output):** USD 0,48 / kg
+    - **Evaluasi Keekonomian:** Investasi dinyatakan **sangat layak (feasible)** karena periode pengembalian modal (1,6 tahun) jauh lebih singkat dibandingkan estimasi umur ekonomis alat (10 tahun).
+    - **Dampak Karbon (ESG):** Pemanfaatan biomassa limbah batang padi bersifat netral karbon (*carbon-neutral*), sementara emisi gas buangnya diserap (*bio-capture*) oleh kolam mikroalga.
     """)
 
 # --- 5. FOOTER IDENTITAS RESMI TIM PENGUSUL ---
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #8b949e; font-size: 12px; line-height: 1.6;">
-    <strong>SI-PADI — Program Kompetisi Inovasi Teknologi dan Energi PFsains 2026</strong>[cite: 11]<br>
-    Ketua Tim: Prof. Dr. Ir. Widayat, S.T., M.T., IPM., ASEAN Eng. (Universitas Diponegoro)[cite: 11]<br>
-    Tim Peneliti: Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T.[cite: 11]<br>
-    Mitra Lapangan: Pusat Organik PUSAKA BLORA & PT Pertamina EP Cepu Field Cepu[cite: 11]
+    <strong>SI-PADI — Program Kompetisi Inovasi Teknologi dan Energi PFsains 2026</strong><br>
+    Ketua Tim: Prof. Dr. Ir. Widayat, S.T., M.T., IPM., ASEAN Eng. (Universitas Diponegoro)<br>
+    Tim Peneliti: Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T.<br>
+    Mitra Lapangan: Pusat Organik PUSAKA BLORA & PT Pertamina EP Cepu Field Cepu
 </div>
 """, unsafe_allow_html=True)
