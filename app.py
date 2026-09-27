@@ -7,7 +7,6 @@ Kebutuhan:  streamlit >= 1.50 (st.fragment, parameter width), pandas, altair
 5 menit demo = 24 jam proses. Model dikalibrasi ke hasil uji di proposal:
 KA 27,72 % bb -> 14 % bb dalam 18–24 jam untuk ±1 ton gabah per batch.
 """
-import base64
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -588,6 +587,22 @@ st.markdown("""
 .logi { font-size:12px; color:#9299a8; padding:5px 0; border-bottom:1px solid #1f2431; }
 .logi b { color:#c9ccd4; font-variant-numeric:tabular-nums; }
 .catatan { font-size:12.5px; color:#8890a1; line-height:1.55; }
+.hmi svg { width:100%; height:auto; display:block; }
+.hmi .pipa { fill:none; stroke:#232838; stroke-width:8; stroke-linecap:round; stroke-linejoin:round; }
+.hmi .alir { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:8 7;
+  animation:alir 1s linear infinite; }
+@keyframes alir { to { stroke-dashoffset:-15; } }
+.hmi .cepat { animation-duration:.5s; }
+.hmi .sedang { animation-duration:.95s; }
+.hmi .lambat { animation-duration:1.7s; }
+.hmi .alir.mati { stroke:#3a4052; animation:none; stroke-dasharray:none; }
+.hmi .kipas { transform-box:fill-box; transform-origin:center; animation:putar .5s linear infinite; }
+.hmi .kipas.diam { animation:none; }
+@keyframes putar { to { transform:rotate(360deg); } }
+.hmi .api { transform-box:fill-box; transform-origin:50% 100%; animation:api .45s ease-in-out infinite alternate; }
+@keyframes api { from { transform:scaleY(.78); opacity:.7; } to { transform:scaleY(1.08); opacity:1; } }
+.hmi.jeda .alir, .hmi.jeda .kipas, .hmi.jeda .api { animation-play-state:paused; }
+@media (prefers-reduced-motion: reduce) { .hmi .alir, .hmi .kipas, .hmi .api { animation:none; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1119,105 +1134,169 @@ with tab_emisi:
 # TAB 4 — DIAGRAM ALIR PROSES (HMI)
 # ------------------------------------------------------------------------------
 def svg_hmi(s, k):
-    aktif_panas = s["firing"] > 0.02
-    ada_aliran = s["blower"] > 0
-    AM, HJ, BR, AB, MR = "#d19a38", "#3fb950", "#58a6ff", "#3a4052", "#ff7b72"
-    w_panas = AM if aktif_panas else AB
-    w_udara = MR if ada_aliran else AB
-    w_pv = BR if s["p_pv"] > 20 else AB
-    grid_aktif = s["sumber_listrik"] == "Grid"
-    rak_svg = ""
+    """Diagram alir hidup. Hanya angka & kelas yang berubah tiap detik, sehingga animasi CSS
+    (aliran garis putus-putus, kipas blower, api tungku) tetap berjalan tanpa terulang."""
+    WG, WF, WB, WU, WP, WL, WD, WT = ("#e8743b", "#d19a38", "#3fb950", "#58a6ff",
+                                      "#ff7b72", "#f2cc60", "#b392f0", "#a47148")
+
+    def laju(nilai, cepat, sedang, ambang=0.02):
+        if nilai <= ambang:
+            return "mati"
+        return "cepat" if nilai >= cepat else ("sedang" if nilai >= sedang else "lambat")
+
+    k_gas = laju(s["firing"], 0.6, 0.25)
+    k_udara = laju(s["blower"], 0.95, 0.5)
+    k_pv = laju(s["p_pv"], 1500, 300, 20)
+    k_beban = laju(s["p_beban"], 800, 200, 5)
+    k_grid = "sedang" if s["sumber_listrik"] == "Grid" else "mati"
+    k_bat = "mati" if s["p_pv"] <= 20 else k_pv
+    kipas_on = s["blower"] > 0
+    api_on = s["firing"] > 0.02
+    massa = ringkasan(s, k["target_ka"])["massa"]
+
+    def aliran(d, warna, kelas, panah=True):
+        w_panah = "#3a4052" if kelas == "mati" else warna
+        mk = f' marker-end="url(#m-{w_panah[1:]})"' if panah else ""
+        return (f'<path class="pipa" d="{d}"/>'
+                f'<path class="alir {kelas}" d="{d}" stroke="{warna}"{mk}/>')
+
+    def marker(w):
+        return (f'<marker id="m-{w[1:]}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="11" '
+                f'markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">'
+                f'<path d="M0 1L9 5L0 9z" fill="{w}"/></marker>')
+
+    rak = ""
     for i, z in enumerate(URUTAN_TAMPIL):
         d = s["zona"][z]
-        y = 178 + i * 74
-        warna = HJ if d["status"] == "Selesai" else WARNA_ZONA[z]
-        rak_svg += f"""
-        <rect x="560" y="{y}" width="200" height="62" rx="5" fill="#0f1015" stroke="{warna}" stroke-width="1.6"/>
-        <text x="572" y="{y + 20}" fill="#e2e4e9" font-size="12" font-weight="700">{NAMA_ZONA[z]} (Zona {NOMOR_ZONA[z]})</text>
-        <text x="572" y="{y + 40}" fill="{warna}" font-size="13" font-weight="700">KA {f1(db_ke_wb(d['ka_db']))} %</text>
-        <text x="660" y="{y + 40}" fill="#c9ccd4" font-size="11">{f1(d['suhu'])} °C  RH {f1(d['rh'], 0)} %</text>
-        <text x="572" y="{y + 55}" fill="#697184" font-size="10">{d['status']}</text>"""
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 560" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
-<defs>
-<marker id="pa" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="{w_panas}"/></marker>
-<marker id="pu" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="{w_udara}"/></marker>
-<marker id="pb" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="{BR}"/></marker>
-<marker id="ph" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="{HJ}"/></marker>
-<marker id="pg" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8890a1"/></marker>
-</defs>
-<rect width="1120" height="560" rx="10" fill="#12141c"/>
-<rect x="14" y="14" width="780" height="532" rx="8" fill="#161822" stroke="#2b3246"/>
+        y = 172 + i * 70
+        w = WB if d["status"] == "Selesai" else WARNA_ZONA[z]
+        rak += (f'<rect x="590" y="{y}" width="170" height="58" rx="5" fill="#0f1015" stroke="{w}" stroke-width="1.6"/>'
+                f'<text x="600" y="{y + 18}" fill="#e2e4e9" font-size="11.5" font-weight="700">{NAMA_ZONA[z]} (Zona {NOMOR_ZONA[z]})</text>'
+                f'<text x="600" y="{y + 37}" fill="{w}" font-size="13" font-weight="700">KA {f1(db_ke_wb(d["ka_db"]))} %</text>'
+                f'<text x="752" y="{y + 37}" fill="#c9ccd4" font-size="10.5" text-anchor="end">{f1(d["suhu"])} °C  RH {f1(d["rh"], 0)} %</text>'
+                f'<text x="600" y="{y + 51}" fill="#697184" font-size="9.5">{d["status"]}</text>')
+
+    api = ""
+    if api_on:
+        for dx, h in ((-18, 16), (0, 22), (18, 15)):
+            cx = 102 + dx
+            api += (f'<path class="api" d="M{cx - 7} 402 Q{cx - 8} {402 - h * 0.6} {cx} {402 - h} '
+                    f'Q{cx + 8} {402 - h * 0.6} {cx + 7} 402 Z" fill="{WG}"/>')
+
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 600" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>{''.join(marker(w) for w in (WG, WF, WB, WU, WP, WL, WD, WT, "#8890a1", "#3a4052"))}</defs>
+<rect width="1120" height="600" rx="10" fill="#12141c"/>
+<rect x="14" y="14" width="780" height="572" rx="8" fill="#161822" stroke="#2b3246"/>
 <text x="30" y="40" fill="#e2e4e9" font-size="13" font-weight="700">Stasiun bioenergi, pembersihan gas &amp; rumah pengering</text>
-<rect x="30" y="250" width="130" height="190" rx="6" fill="#1d202d" stroke="{w_panas}" stroke-width="2"/>
-<text x="95" y="276" fill="{w_panas}" font-size="12" font-weight="700" text-anchor="middle">Tungku biomassa</text>
-<text x="95" y="293" fill="#8890a1" font-size="10" text-anchor="middle">batang padi</text>
-<rect x="42" y="304" width="106" height="50" rx="4" fill="#0f1015" stroke="#333a4d"/>
-<text x="95" y="336" fill="{MR if aktif_panas else '#697184'}" font-size="19" font-weight="700" text-anchor="middle">{f1(s['t_tungku'], 0)} °C</text>
-<text x="95" y="376" fill="#c9ccd4" font-size="11" text-anchor="middle">Daya {s['firing'] * 100:.0f} %</text>
-<text x="95" y="394" fill="#8890a1" font-size="10" text-anchor="middle">Terpakai {f1(s['kg_biomassa'], 0)} kg</text>
-<text x="95" y="428" fill="#697184" font-size="9.5" text-anchor="middle">sensor suhu ruang bakar</text>
-<path d="M160 330 L192 330" stroke="{w_panas}" stroke-width="3" marker-end="url(#pa)"/>
-<rect x="195" y="96" width="92" height="344" rx="6" fill="#1a1d29" stroke="#8890a1" stroke-width="1.4"/>
-<text x="241" y="120" fill="#e2e4e9" font-size="11" font-weight="700" text-anchor="middle">Heat riser</text>
-<line x1="195" y1="150" x2="287" y2="150" stroke="#333a4d" stroke-width="2"/>
-<text x="241" y="176" fill="{AM}" font-size="10" font-weight="600" text-anchor="middle">Filter kasar</text>
-<line x1="195" y1="196" x2="287" y2="196" stroke="#333a4d" stroke-width="2"/>
-<text x="241" y="222" fill="{HJ}" font-size="10" font-weight="600" text-anchor="middle">Filter halus</text>
-<text x="241" y="236" fill="{HJ}" font-size="9.5" text-anchor="middle">HEPA &amp; gas</text>
-<text x="241" y="262" fill="#c9ccd4" font-size="10" text-anchor="middle">ΔP {f1(s['dp_filter'], 0)} Pa</text>
-<path d="M241 96 L241 64 L330 64" stroke="{HJ}" stroke-width="2.4" fill="none" marker-end="url(#ph)"/>
-<text x="338" y="60" fill="{HJ}" font-size="10.5" font-weight="600">Gas buang: CO {f1(s['co'], 0)} mg/Nm³, PM {f1(s['pm'])} mg/Nm³</text>
-<text x="338" y="75" fill="#697184" font-size="9.5">sensor kualitas udara buang, cerobong {f1(s['t_cerobong'], 0)} °C</text>
-<path d="M287 330 L320 330" stroke="{w_panas}" stroke-width="3" marker-end="url(#pa)"/>
-<rect x="322" y="150" width="150" height="290" rx="6" fill="#182026" stroke="{HJ}" stroke-width="2"/>
-<text x="397" y="176" fill="{HJ}" font-size="12" font-weight="700" text-anchor="middle">Penukar panas hibrida</text>
-<text x="397" y="192" fill="#8890a1" font-size="10" text-anchor="middle">gas panas ↔ udara bersih</text>
-<circle cx="397" cy="240" r="30" fill="#0f1015" stroke="{HJ}" stroke-width="2"/>
-<text x="397" y="246" fill="{HJ}" font-size="15" font-weight="700" text-anchor="middle">{f1(s['eff_he'] * 100, 0)}%</text>
-<text x="397" y="288" fill="#8890a1" font-size="10" text-anchor="middle">efektivitas</text>
-<text x="397" y="310" fill="#c9ccd4" font-size="10.5" text-anchor="middle">Gas masuk {f1(s['t_gas_he'], 0)} °C</text>
-<path d="M335 520 L397 520 L397 444" stroke="#8890a1" stroke-width="2" fill="none" marker-end="url(#pg)"/>
-<text x="325" y="516" fill="#8890a1" font-size="10" text-anchor="end">Udara luar {f1(s['t_amb'])} °C, RH {f1(s['rh_amb'], 0)} %</text>
-<text x="325" y="530" fill="#697184" font-size="9.5" text-anchor="end">sensor kualitas udara masuk</text>
-<path d="M472 410 L515 410 L515 492 L548 492" stroke="{w_udara}" stroke-width="3.5" fill="none" marker-end="url(#pu)"/>
-<text x="476" y="400" fill="{w_udara}" font-size="11" font-weight="700">{f1(s['t_masuk'])} °C</text>
-<path d="M545 110 L660 70 L775 110" stroke="#58a6ff" stroke-width="1.6" fill="none" opacity="0.8"/>
-<text x="660" y="98" fill="#58a6ff" font-size="10" text-anchor="middle">atap polikarbonat +{f1(12 * s['iradiasi'] / 1000)} °C</text>
-<rect x="545" y="110" width="230" height="400" rx="6" fill="#1a1c24" stroke="{AM}" stroke-width="2"/>
-<text x="660" y="134" fill="{AM}" font-size="12" font-weight="700" text-anchor="middle">Rumah pengering ±6 × 4 × 3 m</text>
-<text x="660" y="152" fill="#8890a1" font-size="10" text-anchor="middle">1 ton per batch, udara naik dari bawah</text>
-<text x="660" y="168" fill="#8890a1" font-size="10" text-anchor="middle">↑ ventilasi udara lembap</text>
-{rak_svg}
-<text x="660" y="420" fill="{w_udara}" font-size="11" font-weight="600" text-anchor="middle">Blower {'mati' if not ada_aliran else f"{s['blower'] * 100:.0f} %"}</text>
-<text x="660" y="440" fill="#c9ccd4" font-size="10.5" text-anchor="middle">Setpoint {k['setpoint']:.0f} °C, mode {k['mode']}</text>
-<text x="660" y="482" fill="#8890a1" font-size="10" text-anchor="middle">Massa kini {f1(ringkasan(s, k['target_ka'])['massa'], 0)} kg</text>
-<rect x="808" y="14" width="298" height="532" rx="8" fill="#161822" stroke="#2b3246"/>
-<text x="824" y="40" fill="#e2e4e9" font-size="13" font-weight="700">Sistem listrik PLTS</text>
-<rect x="824" y="56" width="266" height="86" rx="6" fill="#151d2a" stroke="{w_pv}" stroke-width="2"/>
-<text x="957" y="80" fill="{w_pv}" font-size="12" font-weight="700" text-anchor="middle">Panel surya 4.000 Wp</text>
-<text x="957" y="108" fill="#e2e4e9" font-size="21" font-weight="700" text-anchor="middle">{f1(s['p_pv'], 0)} W</text>
-<text x="957" y="128" fill="#8890a1" font-size="10" text-anchor="middle">iradiasi {f1(s['iradiasi'], 0)} W/m²</text>
-<path d="M957 142 L957 164" stroke="{w_pv}" stroke-width="2.4" marker-end="url(#pb)"/>
-<rect x="844" y="166" width="226" height="46" rx="6" fill="#1d202d" stroke="{AM}" stroke-width="1.4"/>
-<text x="957" y="194" fill="{AM}" font-size="11.5" font-weight="700" text-anchor="middle">Solar charge controller (MPPT)</text>
-<path d="M957 212 L957 234" stroke="{HJ}" stroke-width="2.4" marker-end="url(#ph)"/>
-<rect x="844" y="236" width="226" height="64" rx="6" fill="#1d202d" stroke="{HJ}" stroke-width="1.4"/>
-<text x="957" y="258" fill="{HJ}" font-size="11.5" font-weight="700" text-anchor="middle">Baterai {BATERAI_KWH:.0f} kWh</text>
-<rect x="866" y="268" width="182" height="12" rx="3" fill="#0f1015" stroke="#333a4d"/>
-<rect x="867" y="269" width="{180 * s['soc'] / 100:.0f}" height="10" rx="2" fill="{HJ if s['soc'] >= SOC_HEMAT else AM}"/>
-<text x="957" y="295" fill="#e2e4e9" font-size="11" text-anchor="middle">SOC {f1(s['soc'], 0)} %</text>
-<rect x="844" y="316" width="226" height="40" rx="6" fill="#0f1015" stroke="{AM if grid_aktif else '#2b3246'}" stroke-dasharray="{'0' if grid_aktif else '4 3'}"/>
-<text x="957" y="341" fill="{AM if grid_aktif else '#697184'}" font-size="11" text-anchor="middle">Cadangan jaringan: {'AKTIF' if grid_aktif else 'siaga'}</text>
-<path d="M957 356 L957 378" stroke="{HJ}" stroke-width="2.4" marker-end="url(#ph)"/>
-<rect x="824" y="380" width="266" height="150" rx="6" fill="#0f1015" stroke="#2b3246"/>
-<text x="838" y="402" fill="#8890a1" font-size="10.5" font-weight="600">Beban listrik {f1(s['p_beban'], 0)} W</text>
-<text x="838" y="424" fill="#e2e4e9" font-size="11">• 2 blower DC: {'mati' if not ada_aliran else f"{f1(P_BLOWER_MAKS_W * s['blower'] ** 3, 0)} W"}</text>
-<text x="838" y="444" fill="#e2e4e9" font-size="11">• Mikrokontroler, sensor, gateway: {P_IOT_W:.0f} W</text>
-<text x="838" y="464" fill="#e2e4e9" font-size="11">• Fan udara tungku: {'aktif' if aktif_panas else 'mati'}</text>
-<text x="838" y="484" fill="#e2e4e9" font-size="11">• Lampu: {'menyala' if s['iradiasi'] <= 0 else 'mati'}</text>
-<text x="838" y="508" fill="#58a6ff" font-size="10">Data logger &amp; server lokal → internet</text>
-<text x="838" y="522" fill="#58a6ff" font-size="10">→ dasbor web &amp; aplikasi seluler</text>
+
+<!-- aliran gas: tungku -> heat riser -> filter -> penukar panas -> cerobong -->
+{aliran("M102 574 L102 504", WT, k_gas)}
+<text x="114" y="580" fill="{WT}" font-size="10">umpan batang padi</text>
+{aliran("M168 470 L218 470 L218 368", WG, k_gas, panah=False)}
+{aliran("M218 326 L218 298", WF, k_gas, panah=False)}
+{aliran("M218 250 L218 70 L345 70 L345 250 L445 250 L445 280 L365 280 L365 310 L445 310 L445 340 L365 340 L365 370 L465 370 L465 152", WF, k_gas, panah=False)}
+{aliran("M465 150 L465 58", WB, k_gas)}
+<text x="478" y="38" fill="{WB}" font-size="10.5" font-weight="600">Gas buang: CO {f1(s['co'], 0)} mg/Nm³, PM {f1(s['pm'])} mg/Nm³</text>
+<text x="478" y="52" fill="#697184" font-size="9.5">sensor kualitas udara buang, cerobong {f1(s['t_cerobong'], 0)} °C</text>
+
+<!-- aliran udara: udara luar -> penukar panas -> blower -> plenum rumah pengering -->
+{aliran("M290 556 L405 556 L405 424", WU, k_udara)}
+<text x="282" y="552" fill="#8890a1" font-size="10" text-anchor="end">Udara luar {f1(s['t_amb'])} °C, RH {f1(s['rh_amb'], 0)} %</text>
+<text x="282" y="566" fill="#697184" font-size="9.5" text-anchor="end">sensor kualitas udara masuk</text>
+{aliran("M482 396 L522 396 L522 522 L557 522", WP, k_udara)}
+<text x="490" y="388" fill="{WP if kipas_on else '#697184'}" font-size="11" font-weight="700">{f1(s['t_masuk'])} °C</text>
+<circle cx="522" cy="462" r="17" fill="#12141c" stroke="{WP if kipas_on else '#3a4052'}" stroke-width="2"/>
+<g class="kipas{'' if kipas_on else ' diam'}" style="animation-duration:{0.5 if s['blower'] >= 0.95 else 0.9}s">
+<path d="M522 462 L522 449 A6 6 0 0 1 531 455 Z M522 462 L535 462 A6 6 0 0 1 529 471 Z M522 462 L522 475 A6 6 0 0 1 513 469 Z M522 462 L509 462 A6 6 0 0 1 515 453 Z" fill="{WP if kipas_on else '#3a4052'}"/>
+</g>
+
+<!-- tungku -->
+<rect x="36" y="330" width="132" height="172" rx="6" fill="#1d202d" stroke="{WF if api_on else '#3a4052'}" stroke-width="2"/>
+<text x="102" y="352" fill="{WF if api_on else '#697184'}" font-size="12" font-weight="700" text-anchor="middle">Tungku biomassa</text>
+<text x="102" y="367" fill="#8890a1" font-size="10" text-anchor="middle">batang padi</text>
+{api}
+<rect x="48" y="408" width="108" height="42" rx="4" fill="#0f1015" stroke="#333a4d"/>
+<text x="102" y="436" fill="{WP if api_on else '#697184'}" font-size="18" font-weight="700" text-anchor="middle">{f1(s['t_tungku'], 0)} °C</text>
+<text x="102" y="470" fill="#c9ccd4" font-size="11" text-anchor="middle">Daya {s['firing'] * 100:.0f} %</text>
+<text x="102" y="487" fill="#8890a1" font-size="10" text-anchor="middle">terpakai {f1(s['kg_biomassa'], 0)} kg</text>
+
+<!-- heat riser & filter -->
+<rect x="200" y="100" width="90" height="400" rx="6" fill="#1a1d29" fill-opacity="0.55" stroke="#8890a1" stroke-width="1.4"/>
+<rect x="200" y="328" width="90" height="38" fill="#232838" stroke="#333a4d"/>
+<text x="258" y="351" fill="{WF}" font-size="10" font-weight="600" text-anchor="middle">Filter kasar</text>
+<rect x="200" y="252" width="90" height="44" fill="#232838" stroke="#333a4d"/>
+<text x="258" y="270" fill="{WB}" font-size="10" font-weight="600" text-anchor="middle">Filter halus</text>
+<text x="258" y="285" fill="{WB}" font-size="9.5" text-anchor="middle">HEPA &amp; gas</text>
+<text x="258" y="232" fill="#c9ccd4" font-size="10" text-anchor="middle">ΔP {f1(s['dp_filter'], 0)} Pa</text>
+<text x="258" y="440" fill="#8890a1" font-size="10" text-anchor="middle">gas panas</text>
+<text x="258" y="454" fill="#8890a1" font-size="10" text-anchor="middle">naik</text>
+<text x="245" y="520" fill="#e2e4e9" font-size="11" font-weight="700" text-anchor="middle">Heat riser</text>
+
+<!-- penukar panas hibrida -->
+<rect x="322" y="150" width="160" height="272" rx="6" fill="#182026" fill-opacity="0.6" stroke="{WB}" stroke-width="2"/>
+<text x="405" y="170" fill="{WB}" font-size="11" font-weight="700" text-anchor="middle">Penukar panas</text>
+<text x="405" y="184" fill="{WB}" font-size="11" font-weight="700" text-anchor="middle">hibrida</text>
+<text x="405" y="208" fill="#e2e4e9" font-size="12.5" font-weight="700" text-anchor="middle">{f1(s['eff_he'] * 100, 0)} %</text>
+<text x="405" y="222" fill="#8890a1" font-size="9.5" text-anchor="middle">efektivitas</text>
+<text x="405" y="238" fill="#c9ccd4" font-size="9.5" text-anchor="middle">gas masuk {f1(s['t_gas_he'], 0)} °C</text>
+<text x="405" y="404" fill="#8890a1" font-size="9.5" text-anchor="middle">udara bersih ↑ dipanaskan</text>
+
+<!-- rumah pengering -->
+<path d="M560 126 L675 84 L790 126" stroke="{WU}" stroke-width="1.6" fill="none" opacity="0.8"/>
+<text x="675" y="116" fill="{WU}" font-size="10" text-anchor="middle">atap polikarbonat +{f1(12 * s['iradiasi'] / 1000)} °C</text>
+{aliran("M675 82 L675 64", "#8890a1", k_udara)}
+<text x="690" y="70" fill="#8890a1" font-size="10">udara lembap keluar</text>
+<text x="690" y="83" fill="#8890a1" font-size="10">RH {f1(s['zona']['atas']['rh'], 0)} %</text>
+<rect x="560" y="126" width="230" height="414" rx="6" fill="#1a1c24" stroke="{WF}" stroke-width="2"/>
+<text x="675" y="146" fill="{WF}" font-size="12" font-weight="700" text-anchor="middle">Rumah pengering ±6 × 4 × 3 m</text>
+<text x="675" y="162" fill="#8890a1" font-size="10" text-anchor="middle">1 ton per batch, udara naik dari bawah</text>
+{aliran("M574 512 L574 170", WP, k_udara)}
+{aliran("M776 512 L776 170", WP, k_udara)}
+{rak}
+<text x="675" y="416" fill="{WP if kipas_on else '#697184'}" font-size="11" font-weight="600" text-anchor="middle">Blower {'mati' if not kipas_on else f"{s['blower'] * 100:.0f} %"}</text>
+<text x="675" y="434" fill="#c9ccd4" font-size="10.5" text-anchor="middle">Setpoint {k['setpoint']:.0f} °C, mode {k['mode']}</text>
+<text x="675" y="452" fill="#8890a1" font-size="10" text-anchor="middle">Massa kini {f1(massa, 0)} kg</text>
+<rect x="582" y="496" width="186" height="34" rx="4" fill="#0f1015" stroke="#333a4d"/>
+<text x="675" y="517" fill="#8890a1" font-size="10" text-anchor="middle">plenum udara panas</text>
+{aliran("M790 470 L800 470 L800 536 L822 536", WD, "lambat")}
+
+<!-- sistem listrik PLTS & IoT -->
+<rect x="808" y="14" width="298" height="572" rx="8" fill="#161822" stroke="#2b3246"/>
+<text x="824" y="40" fill="#e2e4e9" font-size="13" font-weight="700">Sistem listrik PLTS &amp; IoT</text>
+<rect x="824" y="52" width="266" height="80" rx="6" fill="#151d2a" stroke="{WU if k_pv != 'mati' else '#3a4052'}" stroke-width="2"/>
+<text x="957" y="74" fill="{WU if k_pv != 'mati' else '#697184'}" font-size="12" font-weight="700" text-anchor="middle">Panel surya 4.000 Wp</text>
+<text x="957" y="102" fill="#e2e4e9" font-size="20" font-weight="700" text-anchor="middle">{f1(s['p_pv'], 0)} W</text>
+<text x="957" y="122" fill="#8890a1" font-size="10" text-anchor="middle">iradiasi {f1(s['iradiasi'], 0)} W/m²</text>
+{aliran("M957 132 L957 156", WL, k_pv)}
+<rect x="844" y="158" width="226" height="42" rx="6" fill="#1d202d" stroke="{WF}" stroke-width="1.4"/>
+<text x="957" y="184" fill="{WF}" font-size="11.5" font-weight="700" text-anchor="middle">Solar charge controller (MPPT)</text>
+{aliran("M957 200 L957 224", WL, k_bat)}
+<rect x="844" y="226" width="226" height="64" rx="6" fill="#1d202d" stroke="{WB}" stroke-width="1.4"/>
+<text x="957" y="248" fill="{WB}" font-size="11.5" font-weight="700" text-anchor="middle">Baterai {BATERAI_KWH:.0f} kWh</text>
+<rect x="866" y="258" width="182" height="12" rx="3" fill="#0f1015" stroke="#333a4d"/>
+<rect x="867" y="259" width="{180 * s['soc'] / 100:.0f}" height="10" rx="2" fill="{WB if s['soc'] >= SOC_HEMAT else WF}"/>
+<text x="957" y="285" fill="#e2e4e9" font-size="11" text-anchor="middle">SOC {f1(s['soc'], 0)} %</text>
+{aliran("M915 290 L915 378", WL, k_beban)}
+<rect x="980" y="306" width="110" height="46" rx="6" fill="#0f1015" stroke="{WF if k_grid != 'mati' else '#2b3246'}" stroke-dasharray="{'0' if k_grid != 'mati' else '4 3'}"/>
+<text x="1035" y="325" fill="{WF if k_grid != 'mati' else '#697184'}" font-size="10.5" text-anchor="middle">Jaringan PLN</text>
+<text x="1035" y="341" fill="{WF if k_grid != 'mati' else '#697184'}" font-size="10" text-anchor="middle">{'AKTIF' if k_grid != 'mati' else 'cadangan, siaga'}</text>
+{aliran("M1035 352 L1035 378", WL, k_grid)}
+<rect x="824" y="380" width="266" height="104" rx="6" fill="#0f1015" stroke="#2b3246"/>
+<text x="838" y="400" fill="#8890a1" font-size="10.5" font-weight="600">Beban listrik {f1(s['p_beban'], 0)} W</text>
+<text x="838" y="420" fill="#e2e4e9" font-size="11">• 2 blower DC: {'mati' if not kipas_on else f"{f1(P_BLOWER_MAKS_W * s['blower'] ** 3, 0)} W"}</text>
+<text x="838" y="438" fill="#e2e4e9" font-size="11">• Mikrokontroler, sensor, gateway: {P_IOT_W:.0f} W</text>
+<text x="838" y="456" fill="#e2e4e9" font-size="11">• Fan udara tungku: {'aktif' if api_on else 'mati'}</text>
+<text x="838" y="474" fill="#e2e4e9" font-size="11">• Lampu: {'menyala' if s['iradiasi'] <= 0 else 'mati'}</text>
+<rect x="824" y="500" width="266" height="72" rx="6" fill="#0f1015" stroke="{WD}" stroke-opacity="0.6"/>
+<text x="838" y="522" fill="{WD}" font-size="11" font-weight="700">Data logger &amp; server lokal</text>
+<text x="838" y="540" fill="#c9ccd4" font-size="10.5">sensor suhu, RH, KA, emisi, energi</text>
+<text x="838" y="558" fill="#8890a1" font-size="10.5">→ internet → dasbor web &amp; aplikasi seluler</text>
 </svg>"""
+
+
+LEGENDA_HMI = [("Gas panas dari tungku", "#e8743b"), ("Gas tersaring", "#d19a38"), ("Gas buang bersih", "#3fb950"),
+               ("Udara luar", "#58a6ff"), ("Udara panas bersih", "#ff7b72"), ("Listrik", "#f2cc60"),
+               ("Data sensor", "#b392f0"), ("Batang padi", "#a47148")]
 
 
 with tab_hmi:
@@ -1225,12 +1304,16 @@ with tab_hmi:
     def panel_hmi():
         sinkron()
         s = st.session_state.sim
-        svg = svg_hmi(s, kendali())
-        b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
-        st.markdown(f'<img src="data:image/svg+xml;base64,{b64}" style="width:100%;height:auto;" alt="Diagram alir proses SI-PADI"/>',
+        html('<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#c9ccd4;margin:0 0 8px 0;">'
+             + "".join(f'<span><i style="display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;'
+                       f'background:repeating-linear-gradient(90deg,{w} 0 6px,transparent 6px 10px);"></i>{t}</span>'
+                       for t, w in LEGENDA_HMI) + '</div>')
+        kelas = "hmi" if st.session_state.berjalan else "hmi jeda"
+        st.markdown(f'<div class="{kelas}">' + " ".join(svg_hmi(s, kendali()).split("\n")) + "</div>",
                     unsafe_allow_html=True)
-        st.caption("Warna garis mengikuti status nyata: abu-abu berarti aliran berhenti. "
-                   "Urutan komponen mengikuti Gambar 1 proposal (skema integrasi SI-PADI).")
+        st.caption("Garis putus-putus bergerak searah aliran; makin cepat berarti makin besar laju gas, udara, atau "
+                   "listrik. Abu-abu berarti aliran berhenti. Animasi berhenti saat demo dijeda. "
+                   "Urutan komponen mengikuti Bab 2.1 dan Gambar 1 proposal.")
 
     panel_hmi()
 
