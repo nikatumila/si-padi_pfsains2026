@@ -1,26 +1,25 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import time
 
 # --- 1. KONFIGURASI HALAMAN INDUSTRIAL DARK ---
 st.set_page_config(
-    page_title="SI-PADI-Pusat Kendali & Pemantauan IoT",
+    page_title="SI-PADI—Pusat Kendali & Pemantauan IoT",
     page_icon="🌾",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS untuk Dark SCADA Dashboard persis Gambar 5 di Proposal
+# Custom CSS untuk Industrial Dark UI sesuai Gambar 5 Proposal
 st.markdown("""
 <style>
-    /* Background & Container */
+    /* Background Dasar Web */
     .stApp {
         background-color: #0d1117;
         color: #e6edf3;
     }
     
-    /* Header Card */
+    /* Box Header */
     .header-box {
         background: linear-gradient(135deg, #161b22 0%, #21262d 100%);
         border: 1px solid #30363d;
@@ -67,7 +66,7 @@ st.markdown("""
         font-weight: normal;
     }
 
-    /* Station Container */
+    /* Station Containers */
     .station-card {
         background-color: #161b22;
         border: 1px solid #30363d;
@@ -89,15 +88,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Inisialisasi Session State
+# Inisialisasi Session State Penyimpanan Data
 if 'history' not in st.session_state:
     st.session_state.history = []
 if 'jam_counter' not in st.session_state:
     st.session_state.jam_counter = 0
 
-# --- 2. SIDEBAR SIMULASI KONTROL ---
-st.sidebar.markdown("### ⚙️ Kontrol Lingkungan & Beban")
-st.sidebar.caption("SI-PADI PFsains 2026 Simulation Controller")
+# --- 2. SIDEBAR KONTROL SIMULASI ---
+st.sidebar.markdown("### ⚙️ Kontrol Parameter Simulasi")
+st.sidebar.caption("Data Generator Kinetika Pengeringan SI-PADI")
 
 kondisi_cuaca = st.sidebar.selectbox(
     "Sumber Pasokan Energi:",
@@ -106,7 +105,7 @@ kondisi_cuaca = st.sidebar.selectbox(
 
 target_kadar_air = st.sidebar.slider("Target Akhir Kadar Air Gabah (%)", 12.0, 16.0, 14.0, step=0.5)
 suhu_setpoint = st.sidebar.slider("Setpoint Suhu Ruang Pengering (°C)", 35, 60, 50)
-kapasitas_gabah = st.sidebar.selectbox("Muatan Gabah Basah:", ["500 kg", "1000 kg (1 Ton)"])
+kapasitas_gabah = st.sidebar.selectbox("Muatan Gabah Basah:", ["500 kg", "1000 kg (1 Ton - Full Batch)"])
 
 col_btn1, col_btn2 = st.sidebar.columns(2)
 with col_btn1:
@@ -117,7 +116,7 @@ with col_btn2:
         st.session_state.jam_counter = 0
         st.rerun()
 
-# Logika Fisika Berdasarkan Sumber Energi
+# Logika Pemodelan Kinetika Berdasarkan Sumber Daya
 if kondisi_cuaca == "Surya Penuh (Cerah)":
     status_energi = "PLTS PRIMER & BIOMASSA STANDBY"
     suhu_tungku = 180 + np.random.uniform(-5, 5)
@@ -140,7 +139,7 @@ else:
     daya_baterai = max(40.0, 95.0 - st.session_state.jam_counter * 3.2)
     bio_co2 = 91.5 + np.random.uniform(-1, 1)
 
-# Simulasi Penurunan Kadar Air (Basis Kering -> 14% SNI)
+# Rumus Penurunan Kadar Air: 27.72% basis basah menuju target (14% SNI) dalam 24 jam
 ka_mulai = 27.72
 laju_pengurangan = (ka_mulai - target_kadar_air) / 24.0
 current_ka = max(target_kadar_air, ka_mulai - (st.session_state.jam_counter * laju_pengurangan) + np.random.uniform(-0.15, 0.15))
@@ -156,7 +155,7 @@ if btn_step:
         "Daya PLTS (W)": round(daya_plts, 0)
     })
 
-# --- 3. HEADER PERSIS GAMBAR 5 PROPOSAL ---
+# --- 3. HEADER RESMI ---
 st.markdown(f"""
 <div class="header-box">
     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -165,21 +164,27 @@ st.markdown(f"""
             <div class="header-subtitle">Unit Pengering Padi Surya Terintegrasi Biomassa & Bio-Capture · Mitra: PUSAKA BLORA</div>
         </div>
         <div style="text-align:right;">
-            <span style="background-color: #238636; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">● SYSTEM ONLINE</span>
-            <div style="color:#8b949e; font-size:12px; margin-top:5px;">Mode: {status_energi}</div>
+            <span style="background-color: #1f6feb; color: #ffffff; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">
+                🔬 DIGITAL TWIN SIMULATION
+            </span>
+            <div style="color:#8b949e; font-size:11px; margin-top:5px;">Mode: {status_energi}</div>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# TABS UTAMA
-tab_dash, tab_hmi, tab_spek = st.tabs(["📊 Dashboard Monitoring IoT", "🔄 HMI Skema Alur Digital Twin", "📑 Spesifikasi & SOP"])
+# TABS UTAMA (4 TAB LENGKAP)
+tab_dash, tab_hmi, tab_spek, tab_ekonomi = st.tabs([
+    "📊 Dashboard Monitoring IoT", 
+    "🔄 HMI Skema Alur Digital Twin", 
+    "📑 Spesifikasi & SOP",
+    "💰 Kelayakan Finansial & Tekno-Ekonomi"
+])
 
 # ====================================================================
-# TAB 1: DASHBOARD MONITORING TIGA STASIUN UTAMA (GAMBAR 5)
+# TAB 1: DASHBOARD MONITORING TIGA STASIUN (GAMBAR 5 PROPOSAL)
 # ====================================================================
 with tab_dash:
-    # 4 KPI Metrics Baris Pertama
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"""
@@ -212,7 +217,6 @@ with tab_dash:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 3 Kolom Stasiun Sesuai Bab II Deskripsi Inovasi
     col_s1, col_s2, col_s3 = st.columns(3)
 
     with col_s1:
@@ -248,7 +252,6 @@ with tab_dash:
         st.write(f"**Kolam Mikroalga:** `Fotobioreaktor Berputar Aktif`")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Grafik Historis
     st.markdown("#### 📈 Tren Penurunan Kadar Air & Keseimbangan Termal")
     if st.session_state.history:
         df_hist = pd.DataFrame(st.session_state.history).set_index("Jam")
@@ -259,11 +262,18 @@ with tab_dash:
         with g2:
             st.caption("Dinamika Suhu (°C): Tungku Biomassa vs Ruang Pengering")
             st.line_chart(df_hist[["Suhu Tungku (°C)", "Suhu Pengering (°C)"]], color=["#f0883e", "#58a6ff"])
+            
+        st.download_button(
+            label="📥 Unduh Data Log Pengeringan (.CSV)",
+            data=df_hist.to_csv().encode('utf-8'),
+            file_name=f"sipadi_log_batch_{st.session_state.jam_counter}jam.csv",
+            mime="text/csv"
+        )
     else:
         st.info("💡 Tekan tombol **'⏱️ +1 Jam Proses'** pada panel sidebar sebelah kiri untuk melihat simulasi dinamis grafik penurunan kadar air.")
 
 # ====================================================================
-# TAB 2: HMI DIGITAL TWIN (PERSIS GAMBAR 1 DI PROPOSAL)
+# TAB 2: HMI DIGITAL TWIN (GAMBAR 1 PROPOSAL)
 # ====================================================================
 with tab_hmi:
     st.markdown("### 🗺️ Skema Digital Twin Alur Termal & Sirkular Karbon")
@@ -339,7 +349,7 @@ with tab_hmi:
     st.components.v1.html(svg_hmi, height=430)
 
 # ====================================================================
-# TAB 3: SPESIFIKASI TEKNIK & TIM PENELITI
+# TAB 3: SPESIFIKASI TEKNIK & SOP
 # ====================================================================
 with tab_spek:
     st.markdown("### 📋 Ringkasan Teknis Proyek (PFsains 2026)")
@@ -348,15 +358,72 @@ with tab_spek:
     with col_t1:
         st.markdown("""
         **Spesifikasi Fisik & Kapasitas:**
-        - **Dimensi Rumah Pengering:** $\\pm 6\\text{ m} \\times 4\\text{ m} \\times 3\\text{ m}$
-        - **Kapasitas Batch:** $\\pm 1\\text{ Ton}$ gabah segar per siklus pengeringan (18–24 jam)
-        - **Material:** Rangka galvanis, penutup polikarbonat UV-protected, lantai rak stainless steel
-        - **Tingkat Kesiapan Teknologi:** TKT 6–7 (Prototipe teruji di lingkungan operasional nyata)
+        - **Dimensi Rumah Pengering:** $\\pm 6\\text{ m} \\times 4\\text{ m} \\times 3\\text{ m}$[cite: 11]
+        - **Kapasitas Batch:** $\\pm 1\\text{ Ton}$ gabah segar per siklus pengeringan (18–24 jam)[cite: 11]
+        - **Material:** Rangka baja ringan galvanis, dinding polikarbonat UV-protected, lantai stainless steel[cite: 11]
+        - **Tingkat Kesiapan Teknologi:** TKT 6–7 (Prototipe teruji di lingkungan operasional nyata)[cite: 11]
         """)
     with col_t2:
         st.markdown("""
-        **Kemitraan & Lokasi:**
-        - **Lokasi Implementasi:** Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora
-        - **Dukungan Mitra:** PT Pertamina EP Cepu Field Cepu & Pertamina Foundation
-        - **Standar Output:** SNI 6128:2020 (Kadar air aman simpan $\\leq 14\\%$)
+        **Kemitraan & Standar:**
+        - **Lokasi Implementasi:** Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora[cite: 11]
+        - **Dukungan Kemitraan:** PT Pertamina EP Cepu Field Cepu & Pertamina Foundation[cite: 11]
+        - **Standar Output:** SNI 6128:2020 (Kadar air aman simpan $\\leq 14\\%$)[cite: 11]
+        - **SOP Perawatan:** Pembersihan panel berkala, kalibrasi sensor per 6 bulan[cite: 11]
         """)
+
+# ====================================================================
+# TAB 4: KELAYAKAN FINANSIAL & TEKNO-EKONOMI (BAB III PROPOSAL)
+# ====================================================================
+with tab_ekonomi:
+    st.markdown("### 💰 Analisis Kelayakan Finansial & Tekno-Ekonomi")
+    st.caption("Parameter kelayakan investasi alat pengering SI-PADI berdasarkan Bab 3.2 Proposal (Diskonto 12%, Umur Alat 10 Tahun)[cite: 11]")
+    
+    e1, e2, e3, e4 = st.columns(4)
+    with e1:
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-label">Capital Investment</div>
+            <div class="metric-value">USD 2,550</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with e2:
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-label">Net Present Value (NPV)</div>
+            <div class="metric-value" style="color:#3fb950;">USD 8,563</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with e3:
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-label">Payback Period</div>
+            <div class="metric-value" style="color:#f0883e;">±1.6 <span class="metric-unit">Tahun</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+    with e4:
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-label">Margin Nilai Tambah</div>
+            <div class="metric-value" style="color:#58a6ff;">+33.3 <span class="metric-unit">%</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("""
+    - **Harga Gabah Segar (Input):** USD 0,36 / kg[cite: 11]
+    - **Harga Gabah Kering (Output):** USD 0,48 / kg[cite: 11]
+    - **Evaluasi Keekonomian:** Investasi dinyatakan **sangat layak (feasible)** karena periode pengembalian modal (1,6 tahun) jauh lebih singkat dibandingkan estimasi umur ekonomis alat (10 tahun)[cite: 11].
+    - **Dampak Karbon (ESG):** Pemanfaatan biomassa limbah batang padi bersifat netral karbon (*carbon-neutral*), sementara emisi gas buangnya diserap (*bio-capture*) oleh kolam mikroalga[cite: 11].
+    """)
+
+# --- 5. FOOTER IDENTITAS RESMI TIM PENGUSUL ---
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; color: #8b949e; font-size: 12px; line-height: 1.6;">
+    <strong>SI-PADI — Program Kompetisi Inovasi Teknologi dan Energi PFsains 2026</strong>[cite: 11]<br>
+    Ketua Tim: Prof. Dr. Ir. Widayat, S.T., M.T., IPM., ASEAN Eng. (Universitas Diponegoro)[cite: 11]<br>
+    Tim Peneliti: Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T.[cite: 11]<br>
+    Mitra Lapangan: Pusat Organik PUSAKA BLORA & PT Pertamina EP Cepu Field Cepu[cite: 11]
+</div>
+""", unsafe_allow_html=True)
