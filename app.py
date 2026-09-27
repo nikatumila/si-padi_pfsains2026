@@ -5,7 +5,7 @@ import time
 
 # --- 1. KONFIGURASI HALAMAN INDUSTRIAL DARK ---
 st.set_page_config(
-    page_title="SI-PADI — Pusat Kendali & Pemantauan IoT",
+    page_title="SI-PADI-Pusat Kendali & Pemantauan IoT",
     page_icon="🌾",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -234,7 +234,7 @@ with tab_dash:
         st.write(f"**Kapasitas Panel:** `4.000 Wp (Hybrid On/Off-Grid)`")
         st.write(f"**Penyimpanan Baterai:** `{daya_baterai:.1f} %`")
         st.write(f"**Blower Udara Panas:** `Aktif (100% DC Inverter)`")
-        st.write(f"**Solar Charge Controller:** `MPPT Beroperasi Normal`")
+        st.write(f"**Solar Charge Controller:** `MPPT Normal`")
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_s3:
