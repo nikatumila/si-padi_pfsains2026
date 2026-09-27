@@ -1,5 +1,5 @@
 """
-SI-PADI-Panel Monitoring & Kendali Pengering Gabah Hibrida Surya-Biomassa (demo 4 menit)
+SI-PADI-Panel Monitoring & Kendali Pengering Gabah Hibrida Surya-Biomassa
 
 Jalankan:   streamlit run app.py
 Kebutuhan:  streamlit >= 1.50 (st.fragment, parameter width), pandas, altair
@@ -587,6 +587,8 @@ st.markdown("""
 .logi { font-size:12px; color:#9299a8; padding:5px 0; border-bottom:1px solid #1f2431; }
 .logi b { color:#c9ccd4; font-variant-numeric:tabular-nums; }
 .catatan { font-size:12.5px; color:#8890a1; line-height:1.55; }
+.grafik svg { width:100%; height:auto; display:block; font-family:inherit; }
+.grafik { margin:2px 0 6px 0; }
 /* Hilangkan kedip saat data diperbarui tiap detik */
 [data-testid="stStatusWidget"] { visibility:hidden !important; }
 [data-stale="true"], [data-stale="true"] * { opacity:1 !important; transition:none !important; filter:none !important; }
@@ -700,8 +702,8 @@ def sinkron():
 # SIDEBAR - KONSOL DEMO
 # ==============================================================================
 with st.sidebar:
-    st.markdown("### Konsol demo")
-    st.caption("skala 4 menit simulasi = 24 jam proses")
+    st.markdown("### Konsol Demo")
+    st.caption("skala 4 menit demo = 24 jam proses")
     kol1, kol2 = st.columns(2)
     with kol1:
         if st.session_state.berjalan:
@@ -842,6 +844,102 @@ def legenda(item):
                    for t, w, putus in item) + '</div>')
 
 
+# ==============================================================================
+# GRAFIK SVG RINGAN
+# Digambar langsung sebagai SVG supaya tiap detik hanya garisnya yang diperbarui.
+# Grafik Altair digambar ulang utuh setiap kali data berubah sehingga tampak berkedip.
+# ==============================================================================
+WARNA_KONDISI_SVG = {"Cerah": "#e5a43b", "Berawan": "#8b95a8", "Hujan": "#58a6ff", "Malam": "#05060a"}
+
+
+def grafik_svg(gid, df, seri, y_kiri, y_kanan=None, garis=(), latar=False, lebar=520, tinggi=250,
+               judul_x="Jam proses (4 menit demo = 24 jam)"):
+    """seri: list dict(kolom, warna, sumbu='kiri'|'kanan', putus=False, area=False)
+    y_kiri/y_kanan: dict(domain=(min, max), ticks=[...], judul=str)
+    garis: list dict(y, warna, teks, sumbu='kiri')"""
+    ml, mr, mt, mb = 60, (60 if y_kanan else 18), 14, 48
+    pw, ph = lebar - ml - mr, tinggi - mt - mb
+
+    def px(j):
+        return ml + max(0.0, min(24.0, j)) / 24.0 * pw
+
+    def py(v, sumbu):
+        a, b = (y_kanan if sumbu == "kanan" else y_kiri)["domain"]
+        v = max(a, min(b, v))
+        return mt + (1 - (v - a) / (b - a)) * ph
+
+    o = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {lebar} {tinggi}" class="grafik-svg">',
+         f'<defs><clipPath id="klip-{gid}"><rect x="{ml}" y="{mt}" width="{pw}" height="{ph}"/></clipPath></defs>']
+    # latar kondisi cuaca: blok warna utuh, bukan garis tipis per titik data
+    if latar and len(df):
+        blok, awal, kond = [], None, None
+        for jam, cu, ir in zip(df["jam"], df["cuaca"], df["iradiasi"]):
+            k = "Malam" if ir <= 0 else cu
+            if k != kond:
+                if kond is not None:
+                    blok.append((awal, jam, kond))
+                awal, kond = jam, k
+        blok.append((awal, min(24.0, df["jam"].iloc[-1] + REKAM_TIAP_JAM), kond))
+        o.append('<g>' + "".join(
+            f'<rect x="{px(a):.1f}" y="{mt}" width="{max(0.5, px(b) - px(a)):.1f}" height="{ph}" '
+            f'fill="{WARNA_KONDISI_SVG[k]}" fill-opacity="{0.35 if k == "Malam" else 0.13}"/>' for a, b, k in blok) + '</g>')
+    else:
+        o.append('<g></g>')
+    # grid & sumbu
+    g = []
+    for t in y_kiri["ticks"]:
+        y = py(t, "kiri")
+        g.append(f'<line x1="{ml}" x2="{ml + pw}" y1="{y:.1f}" y2="{y:.1f}" stroke="#1f2431"/>'
+                 f'<text x="{ml - 8}" y="{y + 4:.1f}" fill="#8890a1" font-size="12.5" text-anchor="end">{f1(t, 0)}</text>')
+    if y_kanan:
+        for t in y_kanan["ticks"]:
+            y = py(t, "kanan")
+            g.append(f'<text x="{ml + pw + 8}" y="{y + 4:.1f}" fill="#8890a1" font-size="12.5">{f1(t, 0)}</text>')
+    langkah_x = 2 if lebar >= 700 else 4
+    for j in range(0, 25, langkah_x):
+        x = px(j)
+        g.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{mt}" y2="{mt + ph}" stroke="#1f2431"/>'
+                 f'<text x="{x:.1f}" y="{mt + ph + 16}" fill="#8890a1" font-size="12.5" text-anchor="middle">{j}</text>')
+    g.append(f'<text x="{ml + pw / 2:.1f}" y="{tinggi - 6}" fill="#8890a1" font-size="12.5" text-anchor="middle">{judul_x}</text>')
+    g.append(f'<text transform="translate(16 {mt + ph / 2:.1f}) rotate(-90)" fill="#8890a1" font-size="12.5" '
+             f'text-anchor="middle">{y_kiri["judul"]}</text>')
+    if y_kanan:
+        g.append(f'<text transform="translate({lebar - 12} {mt + ph / 2:.1f}) rotate(90)" fill="#8890a1" font-size="12.5" '
+                 f'text-anchor="middle">{y_kanan["judul"]}</text>')
+    o.append('<g>' + "".join(g) + '</g>')
+    # garis acuan (target, setpoint, ambang)
+    ga = []
+    for r in garis:
+        y = py(r["y"], r.get("sumbu", "kiri"))
+        ga.append(f'<line x1="{ml}" x2="{ml + pw}" y1="{y:.1f}" y2="{y:.1f}" stroke="{r["warna"]}" stroke-dasharray="5 4"/>'
+                  f'<text x="{ml + pw - 4}" y="{y - 5:.1f}" fill="{r["warna"]}" font-size="12.5" text-anchor="end">{r["teks"]}</text>')
+    o.append('<g>' + "".join(ga) + '</g>')
+    # data
+    d_list = []
+    for s in seri:
+        sb = s.get("sumbu", "kiri")
+        if len(df):
+            titik = [(px(j), py(v, sb)) for j, v in zip(df["jam"], df[s["kolom"]])]
+        else:
+            titik = [(px(0), py(0, sb))]
+        jalur = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in titik)
+        if s.get("area"):
+            dasar = mt + ph
+            d_list.append(f'<path d="M{titik[0][0]:.1f} {dasar} L{jalur[1:]} L{titik[-1][0]:.1f} {dasar} Z" '
+                          f'fill="{s["warna"]}" fill-opacity="0.28" stroke="none"/>')
+        else:
+            putus = ' stroke-dasharray="6 4"' if s.get("putus") else ""
+            d_list.append(f'<path d="{jalur}" fill="none" stroke="{s["warna"]}" stroke-width="2.2" '
+                          f'stroke-linejoin="round" stroke-linecap="round"{putus}/>')
+    o.append(f'<g clip-path="url(#klip-{gid})">' + "".join(d_list) + '</g>')
+    o.append('</svg>')
+    html('<div class="grafik">' + "".join(o) + '</div>')
+
+
+GRAFIK_RAK = lambda awalan: [dict(kolom=f"{awalan}_{z}", warna=WARNA_ZONA[z]) for z in URUTAN_TAMPIL]
+LEGENDA_RAK_SVG = lambda: [(NAMA_ZONA[z], WARNA_ZONA[z], False) for z in URUTAN_TAMPIL]
+
+
 WARNA_KONDISI = {"Cerah": "#e5a43b", "Berawan": "#8b95a8", "Hujan": "#58a6ff", "Malam": "#0a0b10"}
 
 
@@ -951,19 +1049,23 @@ with tab_dash:
 
             df = df_riwayat()
             st.markdown("##### Penurunan kadar air tiap rak")
-            st.altair_chart(gaya(grafik_per_rak(df, "ka", "Kadar air (% bb)", [12, 29],
-                                                k["target_ka"], f"Target {f1(k['target_ka'])} %"), 270),
-                            width="stretch")
+            legenda(LEGENDA_RAK_SVG() + [(f"Target {f1(k['target_ka'])} %", "#3fb950", True)])
+            grafik_svg("ka", df, GRAFIK_RAK("ka"),
+                       dict(domain=(12, 29), ticks=[12, 15, 18, 21, 24, 27], judul="Kadar air (% bb)"),
+                       garis=[dict(y=k["target_ka"], warna="#3fb950", teks=f"Target {f1(k['target_ka'])} %")],
+                       lebar=820, tinggi=260)
             g1, g2 = st.columns(2)
             with g1:
                 st.markdown("##### Suhu rak")
-                st.altair_chart(gaya(grafik_per_rak(df, "suhu", "°C", [20, 60],
-                                                    k["setpoint"], f"Setpoint {f1(k['setpoint'], 0)} °C"), 200),
-                                width="stretch")
+                grafik_svg("suhu", df, GRAFIK_RAK("suhu"),
+                           dict(domain=(20, 60), ticks=[20, 30, 40, 50, 60], judul="Suhu (°C)"),
+                           garis=[dict(y=k["setpoint"], warna="#3fb950", teks=f"Setpoint {f1(k['setpoint'], 0)} °C")],
+                           judul_x="Jam proses", lebar=460, tinggi=240)
             with g2:
                 st.markdown("##### Kelembapan relatif rak")
-                st.altair_chart(gaya(grafik_per_rak(df, "rh", "RH (%)", [0, 100]), 200),
-                                width="stretch")
+                grafik_svg("rh", df, GRAFIK_RAK("rh"),
+                           dict(domain=(0, 100), ticks=[0, 25, 50, 75, 100], judul="RH (%)"),
+                           judul_x="Jam proses", lebar=460, tinggi=240)
 
         # ---- Pusat kendali -------------------------------------------------
         with kanan:
@@ -1053,39 +1155,28 @@ with tab_energi:
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("##### Neraca listrik PLTS, beban, dan baterai")
-            daya = df[["jam", "p_pv", "p_beban"]].melt("jam", var_name="seri", value_name="nilai")
-            daya["seri"] = daya["seri"].map({"p_pv": "Produksi PLTS (W)", "p_beban": "Beban (W)"})
-            skala_warna = alt.Scale(domain=["Produksi PLTS (W)", "Beban (W)", "SOC baterai (%)"],
-                                    range=["#58a6ff", "#c9ccd4", "#3fb950"])
-            g_daya = alt.Chart(daya).mark_line(strokeWidth=2).encode(
-                x=SUMBU_JAM, y=alt.Y("nilai:Q", title="Daya (W)", scale=alt.Scale(domain=[0, 3400])),
-                color=alt.Color("seri:N", title=None, scale=skala_warna, legend=None))
-            g_soc = alt.Chart(df.assign(seri="SOC baterai (%)")).mark_line(strokeDash=[5, 3], strokeWidth=2).encode(
-                x=SUMBU_JAM, y=alt.Y("soc:Q", title="SOC baterai (%)", scale=alt.Scale(domain=[0, 100])),
-                color=alt.Color("seri:N", title=None, scale=skala_warna, legend=None))
             legenda([("Produksi PLTS (W)", "#58a6ff", False), ("Beban (W)", "#c9ccd4", False),
                      ("SOC baterai (%)", "#3fb950", True)])
-            st.altair_chart(gaya(alt.layer(latar_cuaca(df), g_daya, g_soc).resolve_scale(y="independent", color="independent"), 260),
-                            width="stretch")
+            grafik_svg("daya", df,
+                       [dict(kolom="p_pv", warna="#58a6ff"), dict(kolom="p_beban", warna="#c9ccd4"),
+                        dict(kolom="soc", warna="#3fb950", sumbu="kanan", putus=True)],
+                       dict(domain=(0, 3400), ticks=[0, 500, 1000, 1500, 2000, 2500, 3000], judul="Daya (W)"),
+                       y_kanan=dict(domain=(0, 100), ticks=[0, 20, 40, 60, 80, 100], judul="SOC baterai (%)"),
+                       latar=True, tinggi=260)
             st.caption(f"Warna latar: jingga cerah, abu-abu berawan, biru hujan, gelap malam. "
                        f"PLTS menghasilkan {f1(s['kwh_pv'])} kWh, beban memakai {f1(s['kwh_beban'])} kWh, "
                        f"jaringan PLN {f1(s['kwh_grid'])} kWh.")
         with c2:
             st.markdown("##### Daya tungku dan suhu udara")
-            g_fir = alt.Chart(df).mark_area(opacity=0.30, color="#ff7b72").encode(
-                x=SUMBU_JAM, y=alt.Y("firing:Q", title="Daya tungku (%)",
-                                     scale=alt.Scale(domain=[0, 100])))
-            suhu = df[["jam", "t_masuk", "t_amb"]].melt("jam", var_name="seri", value_name="suhu")
-            suhu["seri"] = suhu["seri"].map({"t_masuk": "Udara masuk ruang (°C)", "t_amb": "Udara luar (°C)"})
-            g_suhu = alt.Chart(suhu).mark_line(strokeWidth=2).encode(
-                x=SUMBU_JAM, y=alt.Y("suhu:Q", title="Suhu (°C)", scale=alt.Scale(domain=[15, 60])),
-                color=alt.Color("seri:N", title=None,
-                                scale=alt.Scale(domain=["Udara masuk ruang (°C)", "Udara luar (°C)"],
-                                                range=["#d19a38", "#8890a1"]), legend=None))
             legenda([("Udara masuk ruang (°C)", "#d19a38", False), ("Udara luar (°C)", "#8890a1", False),
                      ("Daya tungku (%)", "#ff7b72", False)])
-            st.altair_chart(gaya(alt.layer(latar_cuaca(df), g_fir, g_suhu).resolve_scale(y="independent", color="independent"), 260),
-                            width="stretch")
+            grafik_svg("panas", df,
+                       [dict(kolom="firing", warna="#ff7b72", area=True),
+                        dict(kolom="t_masuk", warna="#d19a38", sumbu="kanan"),
+                        dict(kolom="t_amb", warna="#8890a1", sumbu="kanan")],
+                       dict(domain=(0, 100), ticks=[0, 20, 40, 60, 80, 100], judul="Daya tungku (%)"),
+                       y_kanan=dict(domain=(15, 60), ticks=[20, 30, 40, 50, 60], judul="Suhu (°C)"),
+                       latar=True, tinggi=260)
             st.caption("Siang hari, atap polikarbonat ikut memanaskan udara sehingga daya tungku turun. "
                        "Saat hujan dan malam, tungku biomassa mengambil alih.")
         r = ringkasan(s, kendali()["target_ka"])
@@ -1131,18 +1222,14 @@ with tab_emisi:
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("##### CO gas buang")
-            g = alt.layer(
-                alt.Chart(df).mark_line(color="#e5a43b", strokeWidth=2).encode(
-                    x=SUMBU_JAM, y=alt.Y("co:Q", title="mg/Nm³", scale=alt.Scale(domain=[0, 700]))),
-                alt.Chart(pd.DataFrame({"y": [AMBANG_CO]})).mark_rule(strokeDash=[5, 4], color="#ff7b72").encode(y="y:Q"))
-            st.altair_chart(gaya(g, 210), width="stretch")
+            grafik_svg("co", df, [dict(kolom="co", warna="#e5a43b")],
+                       dict(domain=(0, 700), ticks=[0, 200, 400, 600], judul="CO (mg/Nm³)"),
+                       garis=[dict(y=AMBANG_CO, warna="#ff7b72", teks=f"Ambang {AMBANG_CO:.0f}")], tinggi=230)
         with c2:
             st.markdown("##### Partikulat gas buang setelah filter")
-            g = alt.layer(
-                alt.Chart(df).mark_line(color="#58a6ff", strokeWidth=2).encode(
-                    x=SUMBU_JAM, y=alt.Y("pm:Q", title="mg/Nm³", scale=alt.Scale(domain=[0, 60]))),
-                alt.Chart(pd.DataFrame({"y": [AMBANG_PM]})).mark_rule(strokeDash=[5, 4], color="#ff7b72").encode(y="y:Q"))
-            st.altair_chart(gaya(g, 210), width="stretch")
+            grafik_svg("pm", df, [dict(kolom="pm", warna="#58a6ff")],
+                       dict(domain=(0, 60), ticks=[0, 20, 40, 60], judul="Partikulat (mg/Nm³)"),
+                       garis=[dict(y=AMBANG_PM, warna="#ff7b72", teks=f"Ambang {AMBANG_PM:.0f}")], tinggi=230)
         html(f"""<div class="catatan">PM2.5 udara masuk ±{f1(pm_luar, 0)} µg/m³. Batch ini menghindari
         <b>±{f1(r['co2_dihindari'], 0)} kg CO₂</b> dibanding pengering LPG dan listrik PLN.
         Ambang alarm masih setelan internal dan akan disesuaikan dengan baku mutu Permen LHK P.11/2021
@@ -1486,7 +1573,7 @@ with tab_spek:
 
     sek("Asumsi model simulasi demo", "Angka simulasi. Akan diganti data pengukuran setelah uji lapangan.")
     tabel([
-        ("Skala waktu", "Skala 4 menit demo = 24 jam proses (10 detik = 1 jam, 1 detik = 6 menit)"),
+        ("Skala waktu", "4 menit demo = 24 jam proses (10 detik = 1 jam, 1 detik = 6 menit)"),
         ("Jumlah titik sensor rak", "3 zona (rak atas, tengah, bawah) untuk memantau keseragaman pengeringan"),
         ("Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah). Laju bergantung pada suhu "
                      "dan aliran udara, dikalibrasi ke hasil uji lapangan (KA 27,72 % menjadi 14 % dalam 24 jam)"),
