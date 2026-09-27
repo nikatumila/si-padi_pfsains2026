@@ -725,7 +725,7 @@ with st.sidebar:
 | 03:40 | 06:01 | Rak Atas selesai → tungku mati otomatis, pendinginan |
 | 03:45 | 06:34 | Tab **Log & ekspor**: ringkasan batch dan unduh CSV |
 
-Uji interaktif (singkat, lalu kembalikan): setpoint 55 °C → alarm suhu rak; mode manual lalu matikan blower → interlock tungku.
+Uji interaktif (singkat, lalu kembalikan): geser setpoint ke 55 °C untuk memicu alarm suhu rak, atau pilih mode manual lalu matikan blower untuk memicu interlock tungku.
 """)
 
 # ==============================================================================
@@ -1062,15 +1062,15 @@ with tab_energi:
                      ("Daya tungku (%)", "#ff7b72", False)])
             st.altair_chart(gaya(alt.layer(latar_cuaca(df), g_fir, g_suhu).resolve_scale(y="independent", color="independent"), 260),
                             width="stretch")
-            st.caption("Siang hari efek rumah kaca polikarbonat menaikkan suhu udara sehingga daya tungku turun; "
-                       "saat hujan dan malam, tungku biomassa mengambil alih.")
+            st.caption("Siang hari efek rumah kaca polikarbonat menaikkan suhu udara sehingga daya tungku turun. "
+                       "Saat hujan dan malam, tungku biomassa mengambil alih.")
         r = ringkasan(s, kendali()["target_ka"])
         html(f"""<div class="catatan" style="margin-bottom:8px;">Batch ini sejauh ini: <b>listrik {f1(r['porsi_listrik_pv'], 0)} % dari PLTS</b>,
         energi terbarukan (surya + biomassa) <b>{f1(r['porsi_terbarukan'], 1)} %</b> dari seluruh energi yang dipakai,
         energi fosil {f1(100 - r['porsi_terbarukan'], 1)} %.</div>""")
         html(f"""<div class="catatan">Pembagian peran energi: <b>panas</b> untuk pengeringan berasal dari efek rumah kaca
-        dan tungku biomassa batang padi melalui penukar panas (udara pengering tidak bercampur gas buang);
-        <b>listrik</b> untuk blower, sensor IoT, lampu dan fan tungku berasal dari PLTS dan baterai, dengan cadangan
+        dan tungku biomassa batang padi melalui penukar panas, sehingga udara pengering tidak bercampur gas buang.
+        <b>Listrik</b> untuk blower, sensor IoT, lampu dan fan tungku berasal dari PLTS dan baterai, dengan cadangan
         jaringan (on-grid hybrid) bila baterai di bawah {SOC_GRID:.0f} %.</div>""")
 
     panel_energi()
@@ -1097,7 +1097,7 @@ with tab_emisi:
             <div class="kpi-s">mg/Nm³, ambang alarm {AMBANG_PM:.0f}</div></div>
           <div class="kpi"><div class="kpi-j">Beda tekanan filter</div>
             <div class="kpi-n" style="color:{'#e5a43b' if s['dp_filter'] > AMBANG_DP_FILTER else '#f1f3f7'}">{f1(s['dp_filter'], 0)} Pa</div>
-            <div class="kpi-s">naik seiring biomassa terbakar; bersihkan > {AMBANG_DP_FILTER:.0f} Pa</div></div>
+            <div class="kpi-s">naik seiring biomassa terbakar, bersihkan bila di atas {AMBANG_DP_FILTER:.0f} Pa</div></div>
           <div class="kpi"><div class="kpi-j">Efektivitas penukar panas</div>
             <div class="kpi-n" style="color:#f1f3f7">{f1(s['eff_he'] * 100, 0)} %</div>
             <div class="kpi-s">gas masuk {f1(s['t_gas_he'], 0)} °C, keluar cerobong {f1(s['t_cerobong'], 0)} °C</div></div>
@@ -1124,7 +1124,7 @@ with tab_emisi:
         html(f"""<div class="catatan">Kualitas udara masuk: PM2.5 ±{f1(pm_luar, 0)} µg/m³.
         Estimasi emisi CO₂ fosil yang dihindari batch ini: <b>{f1(r['co2_dihindari'], 0)} kg CO₂</b>
         (panas biomassa dibandingkan pengering LPG, listrik PLTS dibandingkan faktor emisi jaringan 0,87 kg/kWh).
-        Ambang alarm adalah setelan internal; sesuaikan dengan baku mutu emisi yang berlaku
+        Ambang alarm adalah setelan internal yang akan disesuaikan dengan baku mutu emisi yang berlaku
         (Permen LHK P.11/2021) setelah uji emisi lapangan.</div>""")
 
     panel_emisi()
@@ -1311,7 +1311,7 @@ with tab_hmi:
         kelas = "hmi" if st.session_state.berjalan else "hmi jeda"
         st.markdown(f'<div class="{kelas}">' + " ".join(svg_hmi(s, kendali()).split("\n")) + "</div>",
                     unsafe_allow_html=True)
-        st.caption("Garis putus-putus bergerak searah aliran; makin cepat berarti makin besar laju gas, udara, atau "
+        st.caption("Garis putus-putus bergerak searah aliran. Makin cepat gerakannya, makin besar laju gas, udara, atau "
                    "listrik. Abu-abu berarti aliran berhenti. Animasi berhenti saat demo dijeda.")
 
     panel_hmi()
@@ -1384,7 +1384,7 @@ with tab_spek:
         ["Operasional & perawatan", "Pembersihan panel berkala, cek sensor bulanan, kalibrasi 6 bulan, 1 operator terlatih"],
         ["Tingkat kesiapan teknologi", "TKT 6-7"],
         ["Acuan", "SNI 6128:2020, pedoman pascapanen padi Kementan, SNI 6729 (pertanian organik), regulasi EBT"],
-        ["Pengendalian emisi", "Baku mutu emisi sumber tidak bergerak, Permen LHK P.11/2021; pemeriksaan berkala"],
+        ["Pengendalian emisi", "Baku mutu emisi sumber tidak bergerak (Permen LHK P.11/2021) dengan pemeriksaan berkala"],
     ], columns=["Parameter", "Keterangan"]).set_index("Parameter"))
 
     st.markdown("### Rencana anggaran biaya - total Rp 220.000.000")
@@ -1450,16 +1450,16 @@ with tab_spek:
     st.table(pd.DataFrame([
         ["Skala waktu", "4 menit demo = 24 jam proses (10 detik = 1 jam, 1 detik = 6 menit)"],
         ["Jumlah titik sensor rak", "3 zona (rak atas, tengah, bawah) untuk memantau keseragaman pengeringan"],
-        ["Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah), laju bergantung suhu & aliran udara; dikalibrasi ke hasil uji lapangan (KA 27,72 % menjadi 14 % dalam 24 jam)"],
+        ["Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah), laju bergantung pada suhu dan aliran udara, dikalibrasi ke hasil uji lapangan (KA 27,72 % menjadi 14 % dalam 24 jam)"],
         ["Hasil kalibrasi", "Skenario standar: Rak Bawah ±17 jam, Rak Tengah ±20 jam, Rak Atas ±22 jam"],
-        ["Kendali suhu", "PI pada daya tungku, setpoint bawaan 45 °C; alarm bila suhu rak > 50 °C; interlock tungku bila blower mati"],
-        ["Blower", f"2 unit DC (jumlah sesuai RAB), total {P_BLOWER_MAKS_W:.0f} W; mode hemat 70 % bila baterai < {SOC_HEMAT:.0f} %"],
+        ["Kendali suhu", "Kendali PI pada daya tungku dengan setpoint bawaan 45 °C. Alarm menyala bila suhu rak di atas 50 °C, dan tungku otomatis dikunci bila blower mati"],
+        ["Blower", f"2 unit DC (jumlah sesuai RAB), total {P_BLOWER_MAKS_W:.0f} W. Mode hemat 70 % bila baterai di bawah {SOC_HEMAT:.0f} %"],
         ["Baterai", f"{BATERAI_KWH:.0f} kWh (LiFePO4 48 V 200 Ah), SOC awal {SOC_AWAL:.0f} %"],
         ["Tungku biomassa", f"kalor maks {Q_TUNGKU_MAKS_KW:.0f} kW ke udara, nilai kalor batang padi {LHV_JERAMI:.0f} MJ/kg, efisiensi tungku + penukar panas {EFISIENSI_TUNGKU_HE * 100:.0f} %"],
         ["Penukar panas", "Efektivitas 73-83 %, turun sedikit saat daya tungku tinggi"],
         ["Efek rumah kaca", "Kenaikan suhu udara hingga +12 °C pada iradiasi 1.000 W/m²"],
         ["Ambang alarm emisi", f"CO {AMBANG_CO:.0f} mg/Nm³, partikulat {AMBANG_PM:.0f} mg/Nm³, beda tekanan filter {AMBANG_DP_FILTER:.0f} Pa (setelan internal)"],
-        ["Pembanding CO₂", "Panas biomassa dibanding pengering LPG (46 MJ/kg, efisiensi 85 %, 2,98 kg CO₂/kg); listrik PLTS dibanding jaringan 0,87 kg CO₂/kWh"],
+        ["Pembanding CO₂", "Panas biomassa dibanding pengering LPG (46 MJ/kg, efisiensi 85 %, 2,98 kg CO₂/kg), sedangkan listrik PLTS dibanding jaringan (0,87 kg CO₂/kWh)"],
     ], columns=["Aspek", "Nilai yang dipakai"]).set_index("Aspek"))
     st.caption("Angka di atas adalah asumsi demo, bukan data pengukuran. Ganti dengan data lapangan "
                "setelah uji kinerja (timeline bulan 4-9).")
