@@ -587,6 +587,28 @@ st.markdown("""
 .logi { font-size:12px; color:#9299a8; padding:5px 0; border-bottom:1px solid #1f2431; }
 .logi b { color:#c9ccd4; font-variant-numeric:tabular-nums; }
 .catatan { font-size:12.5px; color:#8890a1; line-height:1.55; }
+.sek-j { font-size:19px; font-weight:700; color:#f1f3f7; margin:26px 0 4px 0; letter-spacing:-0.2px; }
+.sek-j.pertama { margin-top:6px; }
+.sek-s { font-size:13px; color:#8890a1; margin:0 0 10px 0; }
+.spek-wrap { border:1px solid #232838; border-radius:10px; overflow:hidden; margin-bottom:6px; }
+.spek { width:100%; border-collapse:collapse; table-layout:fixed; }
+.spek th { background:#181b24; color:#8890a1; font-size:13px; font-weight:600; text-align:left; padding:10px 18px; }
+.spek td { padding:10px 18px; border-top:1px solid #1f2431; font-size:14.5px; line-height:1.55; color:#e2e4e9;
+  vertical-align:top; overflow-wrap:break-word; }
+.spek td.kiri { color:#9299a8; }
+.spek tr:hover td { background:#141720; }
+.spek th, .spek td { border-left:none !important; border-right:none !important; border-bottom:none !important; }
+.spek.ringkas td { padding:6px 18px; font-size:13.5px; }
+.spek td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.spek tr.grup td { background:#161a24; color:#d19a38; font-weight:700; font-size:13.5px; }
+.spek tr.total td { background:#181b24; font-weight:700; color:#f1f3f7; }
+.rab-bar { display:flex; height:14px; border-radius:7px; overflow:hidden; margin:6px 0 12px 0; }
+.rab-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:10px; }
+@media (max-width:900px) { .rab-grid { grid-template-columns:1fr; } }
+.rab-kartu { background:#141720; border:1px solid #232838; border-left:4px solid var(--c); border-radius:8px; padding:12px 16px; }
+.rab-kartu .n { font-size:13px; color:#9299a8; }
+.rab-kartu .v { font-size:22px; font-weight:700; color:#f1f3f7; margin-top:2px; font-variant-numeric:tabular-nums; }
+.rab-kartu .p { font-size:12.5px; color:#697184; margin-top:2px; }
 .hmi svg { width:100%; height:auto; display:block; }
 .hmi .pipa { fill:none; stroke:#232838; stroke-width:8; stroke-linecap:round; stroke-linejoin:round; }
 .hmi .alir { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:8 7;
@@ -1371,98 +1393,120 @@ with tab_log:
 # TAB 6 - SPESIFIKASI & RAB (statis)
 # ------------------------------------------------------------------------------
 with tab_spek:
-    st.markdown("### Spesifikasi teknik")
-    st.table(pd.DataFrame([
-        ["Dimensi/kapasitas", "Rumah pengering ±6 m × 4 m × 3 m, kapasitas ±1 ton gabah basah per siklus"],
-        ["Sumber listrik", "PLTS on-grid/off-grid hybrid ±4.000 Wp dengan baterai penyimpanan sebagai cadangan"],
-        ["Sumber panas", "Tungku biomassa limbah batang padi → heat riser → filter kasar & HEPA → penukar panas hibrida → udara bersih ke ruang"],
-        ["Beban listrik PLTS", "Blower, lampu, pembakar, sensor & sistem IoT"],
-        ["Material utama", "Rangka baja ringan galvanis, atap & dinding polikarbonat UV-protected (efek rumah kaca), lantai rak jaring stainless steel"],
-        ["Output", "±1 ton gabah kering (KA ±14 %) per siklus 18-24 jam"],
-        ["Hasil uji", "KA 27,72 % bb → 14 % bb dalam 24 jam (±1 ton per batch)"],
-        ["Pemantauan", "Sensor → data logger & server lokal → internet → dasbor web & aplikasi seluler, dengan peringatan & evaluasi kinerja"],
-        ["Operasional & perawatan", "Pembersihan panel berkala, cek sensor bulanan, kalibrasi 6 bulan, 1 operator terlatih"],
-        ["Tingkat kesiapan teknologi", "TKT 6-7"],
-        ["Acuan", "SNI 6128:2020, pedoman pascapanen padi Kementan, SNI 6729 (pertanian organik), regulasi EBT"],
-        ["Pengendalian emisi", "Baku mutu emisi sumber tidak bergerak (Permen LHK P.11/2021) dengan pemeriksaan berkala"],
-    ], columns=["Parameter", "Keterangan"]).set_index("Parameter"))
+    def sek(judul, sub="", pertama=False):
+        html(f'<div class="sek-j{" pertama" if pertama else ""}">{judul}</div>'
+             + (f'<div class="sek-s">{sub}</div>' if sub else ""))
 
-    st.markdown("### Rencana anggaran biaya - total Rp 220.000.000")
+    def tabel(baris, kolom, lebar_kiri="28%"):
+        kepala = (f'<tr><th style="width:{lebar_kiri}">{kolom[0]}</th><th>{kolom[1]}</th></tr>')
+        isi = "".join(f'<tr><td class="kiri">{k}</td><td>{v}</td></tr>' for k, v in baris)
+        html(f'<div class="spek-wrap"><table class="spek"><thead>{kepala}</thead><tbody>{isi}</tbody></table></div>')
+
+    sek("Spesifikasi teknik", "Rancangan unit pengering SI-PADI kapasitas 1 ton per batch.", pertama=True)
+    tabel([
+        ("Dimensi dan kapasitas", "Rumah pengering ±6 m × 4 m × 3 m, kapasitas ±1 ton gabah basah per siklus"),
+        ("Sumber listrik", "PLTS on-grid/off-grid hybrid ±4.000 Wp dengan baterai penyimpanan sebagai cadangan"),
+        ("Sumber panas", "Tungku biomassa limbah batang padi → heat riser → filter kasar dan HEPA → penukar panas hibrida → udara bersih ke ruang pengering"),
+        ("Beban listrik PLTS", "Blower, lampu, pembakar, sensor, dan sistem IoT"),
+        ("Material utama", "Rangka baja ringan galvanis, atap dan dinding polikarbonat UV-protected (efek rumah kaca), lantai rak jaring stainless steel"),
+        ("Output", "±1 ton gabah kering (KA ±14 %) per siklus 18-24 jam"),
+        ("Hasil uji", "KA 27,72 % bb menjadi 14 % bb dalam 24 jam (±1 ton per batch)"),
+        ("Pemantauan", "Sensor → data logger dan server lokal → internet → dasbor web dan aplikasi seluler, lengkap dengan peringatan dan evaluasi kinerja"),
+        ("Operasional dan perawatan", "Pembersihan panel berkala, cek sensor bulanan, kalibrasi tiap 6 bulan, dioperasikan 1 operator terlatih"),
+        ("Tingkat kesiapan teknologi", "TKT 6-7"),
+        ("Acuan", "SNI 6128:2020, pedoman pascapanen padi Kementan, SNI 6729 (pertanian organik), dan regulasi EBT"),
+        ("Pengendalian emisi", "Baku mutu emisi sumber tidak bergerak (Permen LHK P.11/2021) dengan pemeriksaan berkala"),
+    ], ("Parameter", "Keterangan"))
+
     rab = pd.DataFrame([
-        ["A. Peralatan/bahan utama", "Kolektor surya", "2 unit", 20_000_000],
-        ["A. Peralatan/bahan utama", "Pompa", "2 unit", 10_000_000],
-        ["A. Peralatan/bahan utama", "Rumah pengering", "1 unit", 15_000_000],
-        ["A. Peralatan/bahan utama", "Tungku biomassa", "1 unit", 15_000_000],
-        ["A. Peralatan/bahan utama", "Pipa stainless steel", "40 m", 8_000_000],
-        ["A. Peralatan/bahan utama", "Blower", "2 unit", 10_000_000],
-        ["A. Peralatan/bahan utama", "Filter kasar", "1 unit", 1_000_000],
-        ["A. Peralatan/bahan utama", "Filter halus", "1 unit", 1_000_000],
-        ["A. Peralatan/bahan utama", "Valve", "10 unit", 1_000_000],
-        ["B. Instalasi/konstruksi", "Pondasi & struktur rumah pengering", "1 paket", 20_000_000],
-        ["B. Instalasi/konstruksi", "Instalasi kelistrikan PLTS & sistem IoT", "1 paket", 10_000_000],
-        ["B. Instalasi/konstruksi", "Sirkulasi udara & ducting", "1 paket", 8_000_000],
-        ["C. Tenaga kerja/jasa", "Tukang & instalatur (60 HOK)", "60 HOK", 9_000_000],
-        ["C. Tenaga kerja/jasa", "Programmer IoT & integrasi sistem", "1 paket", 8_000_000],
-        ["C. Tenaga kerja/jasa", "Desain teknis & pengawasan", "1 paket", 5_000_000],
-        ["D. Uji coba & kalibrasi", "Uji fungsi pengering (3 siklus)", "1 paket", 6_000_000],
-        ["D. Uji coba & kalibrasi", "Kalibrasi sensor & instrumen", "1 paket", 3_000_000],
-        ["D. Uji coba & kalibrasi", "Uji mutu gabah/beras", "1 paket", 4_000_000],
-        ["E. Lain-lain", "Dokumentasi, publikasi, pelaporan", "1 paket", 4_000_000],
-        ["E. Lain-lain", "Pelatihan operasi pengeringan & IoT", "4 kali", 6_000_000],
-        ["E. Lain-lain", "Pelatihan kemasan & packing", "2 kali", 3_000_000],
-        ["E. Lain-lain", "Pelatihan pemasaran & pengelolaan", "2 kali", 3_000_000],
+        ["A. Peralatan dan bahan utama", "Kolektor surya", "2 unit", 20_000_000],
+        ["A. Peralatan dan bahan utama", "Pompa", "2 unit", 10_000_000],
+        ["A. Peralatan dan bahan utama", "Rumah pengering", "1 unit", 15_000_000],
+        ["A. Peralatan dan bahan utama", "Tungku biomassa", "1 unit", 15_000_000],
+        ["A. Peralatan dan bahan utama", "Pipa stainless steel", "40 meter", 8_000_000],
+        ["A. Peralatan dan bahan utama", "Blower", "2 unit", 10_000_000],
+        ["A. Peralatan dan bahan utama", "Filter kasar", "1 unit", 1_000_000],
+        ["A. Peralatan dan bahan utama", "Filter halus", "1 unit", 1_000_000],
+        ["A. Peralatan dan bahan utama", "Valve", "10 unit", 1_000_000],
+        ["B. Instalasi dan konstruksi", "Pondasi dan struktur rumah pengering", "1 paket", 20_000_000],
+        ["B. Instalasi dan konstruksi", "Instalasi kelistrikan PLTS dan sistem IoT", "1 paket", 10_000_000],
+        ["B. Instalasi dan konstruksi", "Sirkulasi udara dan ducting", "1 paket", 8_000_000],
+        ["C. Tenaga kerja dan jasa", "Tukang dan instalatur (3 orang × 20 hari)", "60 HOK", 9_000_000],
+        ["C. Tenaga kerja dan jasa", "Programmer IoT dan integrasi sistem", "1 paket", 8_000_000],
+        ["C. Tenaga kerja dan jasa", "Desain teknis dan pengawasan lapangan", "1 paket", 5_000_000],
+        ["D. Uji coba dan kalibrasi", "Uji fungsi sistem pengering (3 siklus)", "1 paket", 6_000_000],
+        ["D. Uji coba dan kalibrasi", "Kalibrasi sensor dan instrumen", "1 paket", 3_000_000],
+        ["D. Uji coba dan kalibrasi", "Uji mutu gabah dan beras", "1 paket", 4_000_000],
+        ["E. Lain-lain", "Dokumentasi, publikasi, dan pelaporan", "1 paket", 4_000_000],
+        ["E. Lain-lain", "Pelatihan operasi pengeringan dan IoT", "4 kali", 6_000_000],
+        ["E. Lain-lain", "Pelatihan kemasan dan packing", "2 kali", 3_000_000],
+        ["E. Lain-lain", "Pelatihan pemasaran dan pengelolaan", "2 kali", 3_000_000],
         ["E. Lain-lain", "Pemasaran online", "2 kali", 3_000_000],
-        ["E. Lain-lain", "Pelatihan website/e-market", "2 kali", 3_000_000],
+        ["E. Lain-lain", "Pelatihan website dan e-market", "2 kali", 3_000_000],
         ["E. Lain-lain", "Survei", "4 kali", 10_000_000],
         ["E. Lain-lain", "Pelatihan", "12 kali", 18_000_000],
-        ["E. Lain-lain", "Monitoring & evaluasi", "4 kali", 10_000_000],
-        ["E. Lain-lain", "Monev pascaimplementasi", "1 paket", 6_000_000],
-    ], columns=["Kelompok", "Komponen", "Volume", "Jumlah (Rp)"])
-    total_rab = rab["Jumlah (Rp)"].sum()
-    kelompok_slide = {"A. Peralatan/bahan utama": "Alat & konstruksi", "B. Instalasi/konstruksi": "Alat & konstruksi",
-                      "C. Tenaga kerja/jasa": "Jasa & uji coba", "D. Uji coba & kalibrasi": "Jasa & uji coba",
-                      "E. Lain-lain": "Pelatihan, survei & monev"}
-    ringkas = (rab.assign(Pos=rab["Kelompok"].map(kelompok_slide))
-               .groupby("Pos", as_index=False, sort=False)["Jumlah (Rp)"].sum())
-    ringkas["Porsi"] = (ringkas["Jumlah (Rp)"] / total_rab * 100).map(lambda x: f1(x) + " %")
-    c1, c2 = st.columns([1, 1.4])
-    with c1:
-        st.dataframe(ringkas.style.format({"Jumlah (Rp)": lambda x: "Rp " + f1(x, 0)}), hide_index=True, width="stretch")
-        st.caption(f"Total Rp {f1(total_rab, 0)}. "
-                   "Mitra: Pusat Organik PUSAKA BLORA dan PT Pertamina EP Cepu Field Cepu.")
-    with c2:
-        with st.expander("Rincian 28 butir RAB"):
-            st.dataframe(rab.style.format({"Jumlah (Rp)": lambda x: "Rp " + f1(x, 0)}), hide_index=True, width="stretch")
+        ["E. Lain-lain", "Monitoring dan evaluasi", "4 kali", 10_000_000],
+        ["E. Lain-lain", "Monitoring dan evaluasi pascaimplementasi", "1 paket", 6_000_000],
+    ], columns=["Kelompok", "Komponen", "Volume", "Jumlah"])
+    total_rab = rab["Jumlah"].sum()
+    pos = [("Alat dan konstruksi", "#d19a38", ["A. Peralatan dan bahan utama", "B. Instalasi dan konstruksi"]),
+           ("Jasa dan uji coba", "#58a6ff", ["C. Tenaga kerja dan jasa", "D. Uji coba dan kalibrasi"]),
+           ("Pelatihan, survei, dan monev", "#3fb950", ["E. Lain-lain"])]
+    nilai_pos = [(n, w, rab[rab["Kelompok"].isin(g)]["Jumlah"].sum()) for n, w, g in pos]
 
-    st.markdown("### Sensor pada skema integrasi dan panel yang menampilkannya")
-    st.table(pd.DataFrame([
-        ["Sensor suhu & kelembapan (T&RH) per rak", "Panel operasional - kabinet rak, grafik suhu & RH"],
-        ["Sensor kadar air gabah (MC)", "Panel operasional - kinetika pengeringan"],
-        ["Sensor suhu ruang bakar", "Energi hibrida, diagram alir"],
-        ["Sensor suhu & efisiensi penukar panas", "Emisi & kualitas udara, diagram alir"],
-        ["Sensor kualitas udara buang", "Emisi & kualitas udara (CO, partikulat)"],
-        ["Sensor kualitas udara masuk", "Emisi & kualitas udara"],
-        ["Monitoring energi PLTS & baterai", "Energi hibrida, diagram alir"],
-    ], columns=["Sensor", "Ditampilkan di"]).set_index("Sensor"))
+    sek("Rencana anggaran biaya", f"Total Rp {f1(total_rab, 0)} untuk 12 bulan pelaksanaan. "
+        "Mitra: Pusat Organik PUSAKA BLORA dan PT Pertamina EP Cepu Field Cepu.")
+    html('<div class="rab-bar">' + "".join(f'<div style="width:{v / total_rab * 100:.2f}%;background:{w}"></div>'
+                                          for _, w, v in nilai_pos) + '</div>'
+         + '<div class="rab-grid">' + "".join(
+             f'<div class="rab-kartu" style="--c:{w}"><div class="n">{n}</div><div class="v">Rp {f1(v, 0)}</div>'
+             f'<div class="p">{f1(v / total_rab * 100)} % dari total anggaran</div></div>' for n, w, v in nilai_pos)
+         + '</div>')
+    with st.expander("Lihat rincian 28 butir RAB"):
+        isi = ""
+        for kel, grup in rab.groupby("Kelompok", sort=False):
+            isi += (f'<tr class="grup"><td colspan="2">{kel}</td><td></td>'
+                    f'<td class="num">Rp {f1(grup["Jumlah"].sum(), 0)}</td></tr>')
+            isi += "".join(f'<tr><td style="width:6%"></td><td>{r.Komponen}</td><td class="num">{r.Volume}</td>'
+                           f'<td class="num">Rp {f1(r.Jumlah, 0)}</td></tr>' for r in grup.itertuples())
+        isi += (f'<tr class="total"><td colspan="3">Total</td><td class="num">Rp {f1(total_rab, 0)}</td></tr>')
+        html('<div class="spek-wrap"><table class="spek ringkas"><thead><tr><th style="width:6%"></th><th>Komponen</th>'
+             '<th style="width:14%;text-align:right">Volume</th><th style="width:20%;text-align:right">Jumlah</th></tr>'
+             f'</thead><tbody>{isi}</tbody></table></div>')
 
-    st.markdown("### Asumsi model simulasi demo")
-    st.caption("Angka-angka berikut adalah asumsi yang dipakai untuk simulasi demo.")
-    st.table(pd.DataFrame([
-        ["Skala waktu", "4 menit demo = 24 jam proses (10 detik = 1 jam, 1 detik = 6 menit)"],
-        ["Jumlah titik sensor rak", "3 zona (rak atas, tengah, bawah) untuk memantau keseragaman pengeringan"],
-        ["Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah), laju bergantung pada suhu dan aliran udara, dikalibrasi ke hasil uji lapangan (KA 27,72 % menjadi 14 % dalam 24 jam)"],
-        ["Hasil kalibrasi", "Skenario standar: Rak Bawah ±17 jam, Rak Tengah ±20 jam, Rak Atas ±22 jam"],
-        ["Kendali suhu", "Kendali PI pada daya tungku dengan setpoint bawaan 45 °C. Alarm menyala bila suhu rak di atas 50 °C, dan tungku otomatis dikunci bila blower mati"],
-        ["Blower", f"2 unit DC (jumlah sesuai RAB), total {P_BLOWER_MAKS_W:.0f} W. Mode hemat 70 % bila baterai di bawah {SOC_HEMAT:.0f} %"],
-        ["Baterai", f"{BATERAI_KWH:.0f} kWh (LiFePO4 48 V 200 Ah), SOC awal {SOC_AWAL:.0f} %"],
-        ["Tungku biomassa", f"kalor maks {Q_TUNGKU_MAKS_KW:.0f} kW ke udara, nilai kalor batang padi {LHV_JERAMI:.0f} MJ/kg, efisiensi tungku + penukar panas {EFISIENSI_TUNGKU_HE * 100:.0f} %"],
-        ["Penukar panas", "Efektivitas 73-83 %, turun sedikit saat daya tungku tinggi"],
-        ["Efek rumah kaca", "Kenaikan suhu udara hingga +12 °C pada iradiasi 1.000 W/m²"],
-        ["Ambang alarm emisi", f"CO {AMBANG_CO:.0f} mg/Nm³, partikulat {AMBANG_PM:.0f} mg/Nm³, beda tekanan filter {AMBANG_DP_FILTER:.0f} Pa (setelan internal)"],
-        ["Pembanding CO₂", "Panas biomassa dibanding pengering LPG (46 MJ/kg, efisiensi 85 %, 2,98 kg CO₂/kg), sedangkan listrik PLTS dibanding jaringan (0,87 kg CO₂/kWh)"],
-    ], columns=["Aspek", "Nilai yang dipakai"]).set_index("Aspek"))
-    st.caption("Angka di atas adalah asumsi demo, bukan data pengukuran. Ganti dengan data lapangan "
-               "setelah uji kinerja (timeline bulan 4-9).")
+    sek("Sensor dan panel yang menampilkannya", "Setiap sensor pada skema integrasi dapat dipantau di tab berikut.")
+    tabel([
+        ("Suhu dan kelembapan (T&amp;RH) per rak", "Panel operasional: kabinet rak, grafik suhu dan RH"),
+        ("Kadar air gabah (MC)", "Panel operasional: kinetika pengeringan"),
+        ("Suhu ruang bakar", "Energi hibrida dan diagram alir"),
+        ("Suhu dan efisiensi penukar panas", "Emisi dan kualitas udara, diagram alir"),
+        ("Kualitas udara buang", "Emisi dan kualitas udara (CO dan partikulat)"),
+        ("Kualitas udara masuk", "Emisi dan kualitas udara"),
+        ("Monitoring energi PLTS dan baterai", "Energi hibrida dan diagram alir"),
+    ], ("Sensor", "Ditampilkan di"), lebar_kiri="34%")
+
+    sek("Asumsi model simulasi demo", "Angka berikut dipakai khusus untuk simulasi dan akan diganti dengan data "
+        "pengukuran setelah uji kinerja lapangan.")
+    tabel([
+        ("Skala waktu", "4 menit demo = 24 jam proses (10 detik = 1 jam, 1 detik = 6 menit)"),
+        ("Jumlah titik sensor rak", "3 zona (rak atas, tengah, bawah) untuk memantau keseragaman pengeringan"),
+        ("Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah). Laju bergantung pada suhu "
+                     "dan aliran udara, dikalibrasi ke hasil uji lapangan (KA 27,72 % menjadi 14 % dalam 24 jam)"),
+        ("Hasil kalibrasi", "Skenario standar: Rak Bawah ±17 jam, Rak Tengah ±20 jam, Rak Atas ±22 jam"),
+        ("Kendali suhu", "Kendali PI pada daya tungku dengan setpoint bawaan 45 °C. Alarm menyala bila suhu rak di atas "
+                         "50 °C, dan tungku otomatis dikunci bila blower mati"),
+        ("Blower", f"2 unit DC dengan total {P_BLOWER_MAKS_W:.0f} W. Mode hemat 70 % aktif bila baterai di bawah {SOC_HEMAT:.0f} %"),
+        ("Baterai", f"{BATERAI_KWH:.0f} kWh (LiFePO4 48 V 200 Ah), SOC awal {SOC_AWAL:.0f} %"),
+        ("Tungku biomassa", f"Kalor maksimum {Q_TUNGKU_MAKS_KW:.0f} kW ke udara, nilai kalor batang padi {LHV_JERAMI:.0f} MJ/kg, "
+                            f"efisiensi tungku dan penukar panas {EFISIENSI_TUNGKU_HE * 100:.0f} %"),
+        ("Penukar panas", "Efektivitas 73-83 %, turun sedikit saat daya tungku tinggi"),
+        ("Efek rumah kaca", "Kenaikan suhu udara hingga +12 °C pada iradiasi 1.000 W/m²"),
+        ("Ambang alarm emisi", f"CO {AMBANG_CO:.0f} mg/Nm³, partikulat {AMBANG_PM:.0f} mg/Nm³, beda tekanan filter "
+                               f"{AMBANG_DP_FILTER:.0f} Pa (setelan internal)"),
+        ("Pembanding CO₂", "Panas biomassa dibanding pengering LPG (46 MJ/kg, efisiensi 85 %, 2,98 kg CO₂/kg), sedangkan "
+                           "listrik PLTS dibanding jaringan (0,87 kg CO₂/kWh)"),
+    ], ("Aspek", "Nilai yang dipakai"))
+
 
 # ==============================================================================
 # FOOTER
