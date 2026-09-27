@@ -160,6 +160,7 @@ def _state_kosong(seed):
         "kwh_grid": 0.0,
         "kg_biomassa": 0.0,
         "mj_panas": 0.0,
+        "mj_surya": 0.0,
         "sumber_listrik": "PLTS",
         "mode_energi": "Normal",
         "cuaca": "cerah",
@@ -285,6 +286,7 @@ def langkah(s, dt, kendali):
         t_potensial = s["t_amb"] + dt_surya * 1.6
         tau = 0.6
     s["t_masuk"] += (t_potensial - s["t_masuk"]) * dt / tau + rng.uniform(-0.05, 0.05)
+    s["mj_surya"] += aliran * 1.005 * dt_surya * 3.6 * dt      # panas surya lewat atap polikarbonat
 
     # ---- Tungku, penukar panas, emisi --------------------------------------
     t_tungku_target = (150.0 + 380.0 * s["firing"]) if s["firing"] > 0.02 else s["t_amb"] + 20
@@ -499,6 +501,9 @@ def ringkasan(s, target_ka):
         sisa = max(sisa, math.log((d["ka_db"] - me) / (target_db - me)) / k)
     air_menguap = MASSA_AWAL_KG - massa
     # Ekuivalen emisi yang dihindari (estimasi kasar untuk narasi)
+    mj_listrik_pv = max(0.0, s["kwh_beban"] - s["kwh_grid"]) * 3.6
+    mj_grid = s["kwh_grid"] * 3.6
+    total = s["mj_panas"] + s["mj_surya"] + mj_listrik_pv + mj_grid
     lpg_kg = s["mj_panas"] / (46.0 * 0.85)
     co2_dihindari = lpg_kg * 2.98 + s["kwh_pv"] * 0.87
     return {
@@ -507,6 +512,9 @@ def ringkasan(s, target_ka):
         "sisa_jam": sisa,
         "air_menguap": air_menguap,
         "co2_dihindari": co2_dihindari,
+        "porsi_terbarukan": 100.0 if total <= 0 else (total - mj_grid) / total * 100,
+        "porsi_listrik_pv": 100.0 if s["kwh_beban"] <= 0 else (1 - s["kwh_grid"] / s["kwh_beban"]) * 100,
+        "porsi_surya": 0.0 if total <= 0 else (s["mj_surya"] + mj_listrik_pv) / total * 100,
         "selesai": sum(1 for z in ZONA if s["zona"][z]["status"] == "Selesai"),
     }
 
@@ -894,7 +902,7 @@ with tab_dash:
             rh_atas = s["zona"]["atas"]["rh"]
             html(f"""
             <div class="kabinet">
-              <div class="aliran"><span>udara panas bersih dari penukar kalor ↑</span></div>
+              <div class="aliran"><span>udara panas bersih dari penukar panas ↑</span></div>
               <div class="rak-list">
                 <div class="ventilasi">↑ Udara lembap keluar lewat ventilasi atap (RH {f1(rh_atas, 0)} %)</div>
                 {baris_rak}
@@ -999,7 +1007,7 @@ with tab_energi:
             <div class="kpi-s">total {f1(s['kg_biomassa'], 0)} kg, ruang bakar {f1(s['t_tungku'], 0)} °C</div></div>
           <div class="kpi"><div class="kpi-j">Porsi kenaikan suhu udara</div>
             <div class="kpi-n" style="color:#e5a43b">{porsi_surya / total_naik * 100:.0f}% surya</div>
-            <div class="kpi-s">{porsi_bio / total_naik * 100:.0f} % dari biomassa lewat penukar kalor</div></div>
+            <div class="kpi-s">{porsi_bio / total_naik * 100:.0f} % dari biomassa lewat penukar panas</div></div>
         </div>""")
         df = df_riwayat()
         c1, c2 = st.columns(2)
@@ -1040,8 +1048,12 @@ with tab_energi:
                             width="stretch")
             st.caption("Siang hari efek rumah kaca polikarbonat menaikkan suhu udara sehingga daya tungku turun; "
                        "saat hujan dan malam, tungku biomassa mengambil alih.")
-        html(f"""<div class="catatan">Pembagian peran energi: <b>panas</b> untuk pengeringan berasal dari efek rumah kaca
-        dan tungku biomassa batang padi melalui penukar kalor (udara pengering tidak bercampur gas buang);
+        r = ringkasan(s, kendali()["target_ka"])
+        html(f"""<div class="catatan" style="margin-bottom:8px;">Batch ini sejauh ini: <b>listrik {f1(r['porsi_listrik_pv'], 0)} % dari PLTS</b>,
+        energi terbarukan (surya + biomassa) <b>{f1(r['porsi_terbarukan'], 1)} %</b> dari seluruh energi yang dipakai,
+        energi fosil {f1(100 - r['porsi_terbarukan'], 1)} %.</div>""")
+        html(f"""<div class="catatan">Pembagian peran energi (Bab 1.1 & 2.1 proposal): <b>panas</b> untuk pengeringan berasal dari efek rumah kaca
+        dan tungku biomassa batang padi melalui penukar panas (udara pengering tidak bercampur gas buang);
         <b>listrik</b> untuk blower, sensor IoT, lampu dan fan tungku berasal dari PLTS dan baterai, dengan cadangan
         jaringan (on-grid hybrid) bila baterai di bawah {SOC_GRID:.0f} %.</div>""")
 
@@ -1070,7 +1082,7 @@ with tab_emisi:
           <div class="kpi"><div class="kpi-j">Beda tekanan filter</div>
             <div class="kpi-n" style="color:{'#e5a43b' if s['dp_filter'] > AMBANG_DP_FILTER else '#f1f3f7'}">{f1(s['dp_filter'], 0)} Pa</div>
             <div class="kpi-s">naik seiring biomassa terbakar; bersihkan > {AMBANG_DP_FILTER:.0f} Pa</div></div>
-          <div class="kpi"><div class="kpi-j">Efektivitas penukar kalor</div>
+          <div class="kpi"><div class="kpi-j">Efektivitas penukar panas</div>
             <div class="kpi-n" style="color:#f1f3f7">{f1(s['eff_he'] * 100, 0)} %</div>
             <div class="kpi-s">gas masuk {f1(s['t_gas_he'], 0)} °C, keluar cerobong {f1(s['t_cerobong'], 0)} °C</div></div>
           <div class="kpi"><div class="kpi-j">CO udara di ruang pengering</div>
@@ -1157,7 +1169,7 @@ def svg_hmi(s, k):
 <text x="338" y="75" fill="#697184" font-size="9.5">sensor kualitas udara buang, cerobong {f1(s['t_cerobong'], 0)} °C</text>
 <path d="M287 330 L320 330" stroke="{w_panas}" stroke-width="3" marker-end="url(#pa)"/>
 <rect x="322" y="150" width="150" height="290" rx="6" fill="#182026" stroke="{HJ}" stroke-width="2"/>
-<text x="397" y="176" fill="{HJ}" font-size="12" font-weight="700" text-anchor="middle">Penukar kalor</text>
+<text x="397" y="176" fill="{HJ}" font-size="12" font-weight="700" text-anchor="middle">Penukar panas hibrida</text>
 <text x="397" y="192" fill="#8890a1" font-size="10" text-anchor="middle">gas panas ↔ udara bersih</text>
 <circle cx="397" cy="240" r="30" fill="#0f1015" stroke="{HJ}" stroke-width="2"/>
 <text x="397" y="246" fill="{HJ}" font-size="15" font-weight="700" text-anchor="middle">{f1(s['eff_he'] * 100, 0)}%</text>
@@ -1202,7 +1214,8 @@ def svg_hmi(s, k):
 <text x="838" y="444" fill="#e2e4e9" font-size="11">• Mikrokontroler, sensor, gateway: {P_IOT_W:.0f} W</text>
 <text x="838" y="464" fill="#e2e4e9" font-size="11">• Fan udara tungku: {'aktif' if aktif_panas else 'mati'}</text>
 <text x="838" y="484" fill="#e2e4e9" font-size="11">• Lampu: {'menyala' if s['iradiasi'] <= 0 else 'mati'}</text>
-<text x="838" y="512" fill="#58a6ff" font-size="10.5">Gateway → dashboard web &amp; seluler</text>
+<text x="838" y="508" fill="#58a6ff" font-size="10">Data logger &amp; server lokal → internet</text>
+<text x="838" y="522" fill="#58a6ff" font-size="10">→ dasbor web &amp; aplikasi seluler</text>
 </svg>"""
 
 
@@ -1244,6 +1257,8 @@ with tab_log:
                                                                   f"({f1(s['mj_panas'] / max(1, r['air_menguap']))} MJ/kg air)"},
                 {"Parameter": "Listrik PLTS / konsumsi / jaringan",
                  "Nilai": f"{f1(s['kwh_pv'])} / {f1(s['kwh_beban'])} / {f1(s['kwh_grid'])} kWh"},
+                {"Parameter": "Porsi energi terbarukan / listrik dari PLTS",
+                 "Nilai": f"{f1(r['porsi_terbarukan'], 1)} % / {f1(r['porsi_listrik_pv'], 0)} %"},
                 {"Parameter": "Estimasi CO₂ fosil dihindari", "Nilai": f"{f1(r['co2_dihindari'], 0)} kg"},
             ]
             st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
@@ -1273,17 +1288,21 @@ with tab_log:
 # TAB 6 — SPESIFIKASI & RAB (statis)
 # ------------------------------------------------------------------------------
 with tab_spek:
-    st.markdown("### Spesifikasi teknik (Tabel 1 proposal)")
-    st.dataframe(pd.DataFrame([
-        ["Dimensi/kapasitas", "Rumah pengering ±6 m × 4 m × 3 m, kapasitas ±1 ton gabah basah per siklus"],
-        ["Sumber energi", "PLTS on-grid/off-grid hybrid ±4.000 Wp dengan baterai penyimpanan; tungku biomassa batang padi"],
-        ["Material utama", "Rangka baja ringan galvanis, atap & dinding polikarbonat UV-protected (efek rumah kaca), lantai rak jaring stainless steel"],
-        ["Output", "±1 ton gabah kering (KA ±14 %) per siklus 18–24 jam"],
-        ["Hasil uji", "KA 27,72 % bb → 14 % bb dalam 24 jam (±1 ton per batch)"],
-        ["Operasional & perawatan", "Pembersihan panel berkala, cek sensor bulanan, kalibrasi 6 bulan, 1 operator terlatih"],
-        ["Tingkat kesiapan teknologi", "TKT 6–7"],
-        ["Acuan", "SNI 6128:2020, pedoman pascapanen padi Kementan, SNI 6729 (pertanian organik), regulasi EBT"],
-    ], columns=["Parameter", "Keterangan"]), hide_index=True, width="stretch")
+    st.markdown("### Spesifikasi teknik")
+    st.table(pd.DataFrame([
+        ["Dimensi/kapasitas", "Rumah pengering ±6 m × 4 m × 3 m, kapasitas ±1 ton gabah basah per siklus", "Tabel 1"],
+        ["Sumber listrik", "PLTS on-grid/off-grid hybrid ±4.000 Wp dengan baterai penyimpanan sebagai cadangan", "Tabel 1"],
+        ["Sumber panas", "Tungku biomassa limbah batang padi → heat riser → filter kasar & HEPA → penukar panas hibrida → udara bersih ke ruang", "Bab 2.1, Gambar 1"],
+        ["Beban listrik PLTS", "Blower, lampu, pembakar, sensor & sistem IoT", "Bab 1.1, 2.1"],
+        ["Material utama", "Rangka baja ringan galvanis, atap & dinding polikarbonat UV-protected (efek rumah kaca), lantai rak jaring stainless steel", "Tabel 1"],
+        ["Output", "±1 ton gabah kering (KA ±14 %) per siklus 18–24 jam", "Tabel 1"],
+        ["Hasil uji", "KA 27,72 % bb → 14 % bb dalam 24 jam (±1 ton per batch)", "Bab 2.1"],
+        ["Pemantauan", "Sensor → data logger & server lokal → internet → dasbor web & aplikasi seluler, dengan peringatan & evaluasi kinerja", "Bab 2.1"],
+        ["Operasional & perawatan", "Pembersihan panel berkala, cek sensor bulanan, kalibrasi 6 bulan, 1 operator terlatih", "Tabel 1"],
+        ["Tingkat kesiapan teknologi", "TKT 6–7", "Bab 2.2"],
+        ["Acuan", "SNI 6128:2020, pedoman pascapanen padi Kementan, SNI 6729 (pertanian organik), regulasi EBT", "Tabel 1"],
+        ["Pengendalian emisi", "Baku mutu emisi sumber tidak bergerak, Permen LHK P.11/2021; pemeriksaan berkala", "Bab 3.4"],
+    ], columns=["Parameter", "Keterangan", "Sumber di proposal"]).set_index("Parameter"))
 
     st.markdown("### Rencana anggaran biaya — total Rp 220.000.000")
     rab = pd.DataFrame([
@@ -1316,39 +1335,49 @@ with tab_spek:
         ["E. Lain-lain", "Monitoring & evaluasi", "4 kali", 10_000_000],
         ["E. Lain-lain", "Monev pascaimplementasi", "1 paket", 6_000_000],
     ], columns=["Kelompok", "Komponen", "Volume", "Jumlah (Rp)"])
-    ringkas = rab.groupby("Kelompok", as_index=False)["Jumlah (Rp)"].sum()
-    ringkas["Porsi"] = (ringkas["Jumlah (Rp)"] / rab["Jumlah (Rp)"].sum() * 100).round(1).astype(str) + " %"
+    total_rab = rab["Jumlah (Rp)"].sum()
+    kelompok_slide = {"A. Peralatan/bahan utama": "Alat & konstruksi", "B. Instalasi/konstruksi": "Alat & konstruksi",
+                      "C. Tenaga kerja/jasa": "Jasa & uji coba", "D. Uji coba & kalibrasi": "Jasa & uji coba",
+                      "E. Lain-lain": "Pelatihan, survei & monev"}
+    ringkas = (rab.assign(Pos=rab["Kelompok"].map(kelompok_slide))
+               .groupby("Pos", as_index=False, sort=False)["Jumlah (Rp)"].sum())
+    ringkas["Porsi"] = (ringkas["Jumlah (Rp)"] / total_rab * 100).map(lambda x: f1(x) + " %")
     c1, c2 = st.columns([1, 1.4])
     with c1:
-        st.dataframe(ringkas.style.format({"Jumlah (Rp)": "{:,.0f}"}), hide_index=True, width="stretch")
-        st.caption(f"Total: Rp {rab['Jumlah (Rp)'].sum():,.0f}. Mitra: Pusat Organik PUSAKA BLORA dan "
-                   "PT Pertamina EP Cepu Field Cepu.".replace(",", "."))
+        st.dataframe(ringkas.style.format({"Jumlah (Rp)": lambda x: "Rp " + f1(x, 0)}), hide_index=True, width="stretch")
+        st.caption(f"Total Rp {f1(total_rab, 0)} (Tabel 3 proposal). Pengelompokan mengikuti slide Anggaran. "
+                   "Mitra: Pusat Organik PUSAKA BLORA dan PT Pertamina EP Cepu Field Cepu.")
     with c2:
-        with st.expander("Rincian 28 butir RAB"):
-            st.dataframe(rab.style.format({"Jumlah (Rp)": "{:,.0f}"}), hide_index=True, width="stretch")
+        with st.expander("Rincian 28 butir RAB (Tabel 3)"):
+            st.dataframe(rab.style.format({"Jumlah (Rp)": lambda x: "Rp " + f1(x, 0)}), hide_index=True, width="stretch")
 
     st.markdown("### Sensor pada skema integrasi dan panel yang menampilkannya")
-    st.dataframe(pd.DataFrame([
+    st.table(pd.DataFrame([
         ["Sensor suhu & kelembapan (T&RH) per rak", "Panel operasional — kabinet rak, grafik suhu & RH"],
         ["Sensor kadar air gabah (MC)", "Panel operasional — kinetika pengeringan"],
         ["Sensor suhu ruang bakar", "Energi hibrida, diagram alir"],
-        ["Sensor suhu & efisiensi penukar kalor", "Emisi & kualitas udara, diagram alir"],
+        ["Sensor suhu & efisiensi penukar panas", "Emisi & kualitas udara, diagram alir"],
         ["Sensor kualitas udara buang", "Emisi & kualitas udara (CO, partikulat)"],
         ["Sensor kualitas udara masuk", "Emisi & kualitas udara"],
         ["Monitoring energi PLTS & baterai", "Energi hibrida, diagram alir"],
-    ], columns=["Sensor (Gambar 1 proposal)", "Ditampilkan di"]), hide_index=True, width="stretch")
+    ], columns=["Sensor (Gambar 1 proposal)", "Ditampilkan di"]).set_index("Sensor (Gambar 1 proposal)"))
 
     st.markdown("### Asumsi model simulasi demo")
-    st.dataframe(pd.DataFrame([
+    st.caption("Proposal tidak menyebut angka-angka berikut; nilainya dipakai hanya untuk simulasi demo.")
+    st.table(pd.DataFrame([
         ["Skala waktu", "5 menit demo = 24 jam proses (1 detik = 4,8 menit)"],
-        ["Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah), laju bergantung suhu (Arrhenius) & aliran udara"],
-        ["Kalibrasi", "Skenario standar: Rak Bawah ±17 jam, Rak Tengah ±20 jam, Rak Atas ±22 jam (proposal: 18–24 jam)"],
-        ["Kendali suhu", "PI pada daya tungku, setpoint bawaan 45 °C; interlock tungku bila blower mati"],
-        ["Blower", f"2 unit DC total {P_BLOWER_MAKS_W:.0f} W; mode hemat 70 % bila baterai < {SOC_HEMAT:.0f} %"],
-        ["Baterai", f"{BATERAI_KWH:.0f} kWh (asumsi LiFePO4 48 V 200 Ah), SOC awal {SOC_AWAL:.0f} %"],
-        ["Tungku", f"kalor maks {Q_TUNGKU_MAKS_KW:.0f} kW ke udara, LHV jerami {LHV_JERAMI:.0f} MJ/kg, efisiensi tungku+HE {EFISIENSI_TUNGKU_HE * 100:.0f} %"],
+        ["Jumlah titik sensor rak", "3 zona (rak atas, tengah, bawah) untuk memantau keseragaman pengeringan"],
+        ["Kinetika", "Model Lewis dengan KA setimbang Henderson termodifikasi (konstanta gabah), laju bergantung suhu & aliran udara; dikalibrasi ke hasil uji Bab 2.1"],
+        ["Hasil kalibrasi", "Skenario standar: Rak Bawah ±17 jam, Rak Tengah ±20 jam, Rak Atas ±22 jam"],
+        ["Kendali suhu", "PI pada daya tungku, setpoint bawaan 45 °C; alarm bila suhu rak > 50 °C; interlock tungku bila blower mati"],
+        ["Blower", f"2 unit DC (jumlah sesuai RAB), total {P_BLOWER_MAKS_W:.0f} W; mode hemat 70 % bila baterai < {SOC_HEMAT:.0f} %"],
+        ["Baterai", f"{BATERAI_KWH:.0f} kWh (LiFePO4 48 V 200 Ah), SOC awal {SOC_AWAL:.0f} %"],
+        ["Tungku biomassa", f"kalor maks {Q_TUNGKU_MAKS_KW:.0f} kW ke udara, nilai kalor batang padi {LHV_JERAMI:.0f} MJ/kg, efisiensi tungku + penukar panas {EFISIENSI_TUNGKU_HE * 100:.0f} %"],
+        ["Penukar panas", "Efektivitas 73–83 %, turun sedikit saat daya tungku tinggi"],
         ["Efek rumah kaca", "Kenaikan suhu udara hingga +12 °C pada iradiasi 1.000 W/m²"],
-    ], columns=["Aspek", "Nilai yang dipakai"]), hide_index=True, width="stretch")
+        ["Ambang alarm emisi", f"CO {AMBANG_CO:.0f} mg/Nm³, partikulat {AMBANG_PM:.0f} mg/Nm³, beda tekanan filter {AMBANG_DP_FILTER:.0f} Pa (setelan internal)"],
+        ["Pembanding CO₂", "Panas biomassa dibanding pengering LPG (46 MJ/kg, efisiensi 85 %, 2,98 kg CO₂/kg); listrik PLTS dibanding jaringan 0,87 kg CO₂/kWh"],
+    ], columns=["Aspek", "Nilai yang dipakai"]).set_index("Aspek"))
     st.caption("Angka di atas adalah asumsi demo, bukan data pengukuran. Ganti dengan data lapangan "
                "setelah uji kinerja (timeline bulan 4–9).")
 
