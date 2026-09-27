@@ -207,15 +207,15 @@ if 'initialized' not in st.session_state:
     st.session_state.initialized = True
 
 # ==============================================================================
-# 3. SIDEBAR SIMULASI DINAMIKA SISTEM (GARANSI TUNTAS DALAM 5 MENIT)
+# 3. SIDEBAR SIMULASI DINAMIKA SISTEM
 # ==============================================================================
 st.sidebar.markdown("### Konsol Demo 5 Menit")
-st.sidebar.caption("Simulasi 5 menit setara siklus pengeringan 1 ton 24 jam")[span_4](start_span)[span_4](end_span)
+st.sidebar.caption("Simulasi 5 menit setara siklus pengeringan 1 ton 24 jam")
 
 auto_toggle = st.sidebar.toggle("Jalankan Simulasi Otomatis", value=st.session_state.auto_play)
 st.session_state.auto_play = auto_toggle
 
-detik_maks = 300  # 5 Menit
+detik_maks = 300
 prog = min(1.0, st.session_state.detik_berjalan / detik_maks)
 st.sidebar.progress(prog, text=f"Waktu Presentasi: {st.session_state.detik_berjalan // 60:02d}:{st.session_state.detik_berjalan % 60:02d} / 05:00")
 
@@ -246,7 +246,6 @@ def update_kondisi_zona(dt_detik):
         if z["status"] == "Selesai":
             continue
         
-        # Penyesuaian laju adaptif agar ketiga zona tuntas bertahap sebelum 5 menit
         if "Rak Tengah" in z_nama:
             laju = max(0.06, (17.9 - target) / 90) * dt_detik
         elif "Rak Atas" in z_nama:
@@ -468,7 +467,7 @@ with tab_dashboard:
 # ------------------------------------------------------------------------------
 with tab_hmi:
     st.markdown("### Skema Integrasi Termal & Pembangkit EBT SI-PADI")
-    st.caption("Visualisasi Terpadu Stasiun Bioenergi, Menara Penukar Panas (HE), 1 Unit Rumah Pengering Rak Bertingkat, dan PLTS 4.000 Wp")[span_5](start_span)[span_5](end_span)
+    st.caption("Visualisasi Terpadu Stasiun Bioenergi, Menara Penukar Panas (HE), 1 Unit Rumah Pengering Rak Bertingkat, dan PLTS 4.000 Wp")
 
     if "Surya" in st.session_state.cuaca:
         suplai_plts_wp = 3920
@@ -602,7 +601,7 @@ with tab_hmi:
 # ------------------------------------------------------------------------------
 with tab_spek:
     st.markdown("### Spesifikasi Keteknikan & Rencana Anggaran Biaya Revisi")
-    st.caption("Diselaraskan Penuh dengan Draf Final Usulan PFsains Pertamina Foundation 2026")[span_6](start_span)[span_6](end_span)
+    st.caption("Diselaraskan Penuh dengan Draf Final Usulan PFsains Pertamina Foundation 2026")
 
     col_spec_a, col_spec_b = st.columns(2)
     with col_spec_a:
@@ -614,7 +613,7 @@ with tab_spek:
         * **Profil Kadar Air:** Diturunkan dari 27,72% (basis basah) menjadi ≤ 14,0% (Standar SNI 6128:2020).
         * **Sumber Daya:** Array PLTS 4.000 Wp baterai penyimpanan & tungku biomassa batang padi.
         * **Tingkat Kesiapan Teknologi:** TKT level 6–7 (teruji operasional lapangan).
-        """)[span_7](start_span)[span_7](end_span)
+        """)
 
     with col_spec_b:
         st.markdown("""
@@ -623,7 +622,7 @@ with tab_spek:
         * **Alokasi Investasi Pokok:** 1 Unit Rumah pengering galvanis (Rp 15 juta), tungku biomassa cor beton (Rp 15 juta), pipa stainless steel, blower induksi, filter ganda (HEPA & Coarse), dan modul sensor IoT.
         * **Mitra Sasaran & Lokasi:** Sentra Pertanian Terpadu Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora.
         * **Mitra Kolaborasi:** PT Pertamina EP Cepu Field Cepu.
-        """)[span_8](start_span)[span_8](end_span)
+        """)
 
 # ==============================================================================
 # 6. FOOTER RESMI TIM PENGUSUL
@@ -637,10 +636,10 @@ st.markdown("""
     <strong>Tim Peneliti:</strong> Ir. Ali Mutakin, S.Kom. · Yusron Mahendra Diwiyanto, S.T. · Hasan Mustafa Widayat, S.T. · Dr. Norman Iskandar, S.T., M.T.<br>
     Pusat Organik PUSAKA BLORA · PT Pertamina EP Cepu Field Cepu
 </div>
-""", unsafe_allow_html=True)[span_9](start_span)[span_9](end_span)
+""", unsafe_allow_html=True)
 
 # ==============================================================================
-# 7. ENGINE AUTO-PLAY LOOP (BERJALAN TIAP 3 DETIK SELAMA PRESENTASI)
+# 7. ENGINE AUTO-PLAY LOOP
 # ==============================================================================
 if st.session_state.auto_play and st.session_state.detik_berjalan < detik_maks:
     time.sleep(3)
