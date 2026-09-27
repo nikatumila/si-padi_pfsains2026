@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import time
 
 # --- 1. KONFIGURASI HALAMAN INDUSTRIAL DARK ---
 st.set_page_config(
@@ -96,17 +95,17 @@ if 'jam_counter' not in st.session_state:
     st.session_state.jam_counter = 0
 
 # --- 2. SIDEBAR SIMULASI KONTROL ---
-st.sidebar.markdown("### ⚙️ Kontrol Lingkungan & Beban")
-st.sidebar.caption("SI-PADI PFsains 2026 Simulation Controller")
+st.sidebar.markdown("### ⚙️ Kontrol Parameter Simulasi")
+st.sidebar.caption("Data Generator Kinetika Pengeringan SI-PADI")
 
 kondisi_cuaca = st.sidebar.selectbox(
-    "Sumber Pasokan Energi:",
+    "Simulasi Pasokan Energi:",
     ["Surya Penuh (Cerah)", "Hibrida (Mendung)", "Biomassa Penuh (Hujan/Malam)"]
 )
 
 target_kadar_air = st.sidebar.slider("Target Akhir Kadar Air Gabah (%)", 12.0, 16.0, 14.0, step=0.5)
 suhu_setpoint = st.sidebar.slider("Setpoint Suhu Ruang Pengering (°C)", 35, 60, 50)
-kapasitas_gabah = st.sidebar.selectbox("Muatan Gabah Basah:", ["500 kg", "1000 kg (1 Ton - Full Batch)"])
+kapasitas_gabah = st.sidebar.selectbox("Muatan Uji Gabah Basah:", ["500 kg", "1000 kg (1 Ton - Full Batch)"])
 
 col_btn1, col_btn2 = st.sidebar.columns(2)
 with col_btn1:
@@ -117,7 +116,7 @@ with col_btn2:
         st.session_state.jam_counter = 0
         st.rerun()
 
-# Logika Fisika Berdasarkan Sumber Energi
+# Logika Pemodelan Berdasarkan Sumber Energi
 if kondisi_cuaca == "Surya Penuh (Cerah)":
     status_energi = "PLTS PRIMER & BIOMASSA STANDBY"
     suhu_tungku = 180 + np.random.uniform(-5, 5)
@@ -133,14 +132,14 @@ elif kondisi_cuaca == "Hibrida (Mendung)":
     daya_baterai = max(50.0, 85.0 - st.session_state.jam_counter * 1.5)
     bio_co2 = 82.0 + np.random.uniform(-2, 2)
 else:
-    status_energi = "BIOMASSA TOTAL (100%) - ZERO CARBON EMISSION"
+    status_energi = "BIOMASSA TOTAL (100%) - SIKLUS SIRKULAR"
     suhu_tungku = 440 + np.random.uniform(-12, 12)
     efisiensi_he = 81.5
     daya_plts = 0.0
     daya_baterai = max(40.0, 95.0 - st.session_state.jam_counter * 3.2)
     bio_co2 = 91.5 + np.random.uniform(-1, 1)
 
-# Simulasi Penurunan Kadar Air (Basis Kering -> 14% SNI)
+# Simulasi Penurunan Kadar Air Sesuai Uji Coba Proposal (27.72% ke 14% dlm 24 Jam)
 ka_mulai = 27.72
 laju_pengurangan = (ka_mulai - target_kadar_air) / 24.0
 current_ka = max(target_kadar_air, ka_mulai - (st.session_state.jam_counter * laju_pengurangan) + np.random.uniform(-0.15, 0.15))
@@ -156,30 +155,34 @@ if btn_step:
         "Daya PLTS (W)": round(daya_plts, 0)
     })
 
-# --- 3. HEADER PERSIS GAMBAR 5 PROPOSAL ---
+# --- 3. HEADER DENGAN STATUS TRANSPARAN DIGITAL TWIN (POIN 1) ---
 st.markdown(f"""
 <div class="header-box">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
             <div class="header-title">SI-PADI: Pusat Kendali & Pemantauan IoT</div>
-            <div class="header-subtitle">Unit Pengering Padi Surya Terintegrasi Biomassa & Bio-Capture · Mitra: PUSAKA BLORA</div>
+            <div class="header-subtitle">Pengering Padi Surya Terintegrasi Biomassa & Bio-Capture · Lokasi: PUSAKA BLORA</div>
         </div>
         <div style="text-align:right;">
-            <span style="background-color: #238636; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">● SYSTEM ONLINE</span>
-            <div style="color:#8b949e; font-size:12px; margin-top:5px;">Mode: {status_energi}</div>
+            <span style="background-color: #1f6feb; color: #ffffff; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">
+                🔬 SIMULASI DIGITAL TWIN (PRE-COMMISSIONING)
+            </span>
+            <div style="color:#8b949e; font-size:11px; margin-top:5px;">Mode: {status_energi}</div>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # TABS UTAMA
-tab_dash, tab_hmi, tab_spek = st.tabs(["📊 Dashboard Monitoring IoT", "🔄 HMI Skema Alur Digital Twin", "📑 Spesifikasi & SOP"])
+tab_dash, tab_hmi, tab_spek = st.tabs(["📊 Dashboard Monitoring IoT", "🔄 HMI Skema Alur Digital Twin", "📑 Spesifikasi & Metodologi"])
 
 # ====================================================================
-# TAB 1: DASHBOARD MONITORING TIGA STASIUN UTAMA (GAMBAR 5)
+# TAB 1: DASHBOARD MONITORING TIGA STASIUN
 # ====================================================================
 with tab_dash:
-    # 4 KPI Metrics Baris Pertama
+    # Banner penjelasan mode simulasi
+    st.info("ℹ️ **Status Telemetri**: Data sensor yang ditampilkan saat ini bersumber dari **Model Simulasi Digital Twin** berbasis kinetika pengeringan gabah 1 ton untuk validasi antarmuka sebelum integrasi perangkat keras.")
+
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"""
@@ -212,16 +215,14 @@ with tab_dash:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 3 Kolom Stasiun Sesuai Bab II Deskripsi Inovasi
     col_s1, col_s2, col_s3 = st.columns(3)
-
     with col_s1:
         st.markdown("""
         <div class="station-card">
             <div class="station-title">🔥 1. Stasiun Bioenergi & Gas Cleaning</div>
         """, unsafe_allow_html=True)
         st.write(f"**Suhu Ruang Bakar:** `{suhu_tungku:.1f} °C`")
-        st.write(f"**Filter Kasar & HEPA Gas:** `Normal (Terpasang)`")
+        st.write(f"**Filter Kasar & HEPA:** `Status Siap Operasi`")
         st.write(f"**Efisiensi Heat Exchanger:** `{efisiensi_he}%`")
         st.write(f"**Sisa Gas Buang:** `Teralirkan ke Bio-Capture`")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -231,10 +232,10 @@ with tab_dash:
         <div class="station-card">
             <div class="station-title">☀️ 2. Sistem PLTS & Kelistrikan</div>
         """, unsafe_allow_html=True)
-        st.write(f"**Kapasitas Panel:** `4.000 Wp (Hybrid On/Off-Grid)`")
+        st.write(f"**Kapasitas Panel:** `4.000 Wp (Hybrid)`")
         st.write(f"**Penyimpanan Baterai:** `{daya_baterai:.1f} %`")
-        st.write(f"**Blower Udara Panas:** `Aktif (100% DC Inverter)`")
-        st.write(f"**Solar Charge Controller:** `MPPT Beroperasi Normal`")
+        st.write(f"**Blower Udara Panas:** `Aktif (100% DC)`")
+        st.write(f"**Solar Controller:** `MPPT Siap Operasi`")
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_s3:
@@ -243,27 +244,26 @@ with tab_dash:
             <div class="station-title">🌾 3. Pengering Gabah & Kolam Alga</div>
         """, unsafe_allow_html=True)
         st.write(f"**Kapasitas Batch:** `{kapasitas_gabah}`")
-        st.write(f"**Waktu Siklus Berjalan:** `{st.session_state.jam_counter} Jam / 24 Jam`")
+        st.write(f"**Siklus Waktu:** `{st.session_state.jam_counter} Jam / 24 Jam`")
         st.write(f"**Target Mutu:** `SNI 6128:2020 (KA 14%)`")
-        st.write(f"**Kolam Mikroalga:** `Fotobioreaktor Berputar Aktif`")
+        st.write(f"**Kolam Mikroalga:** `Fotobioreaktor Berputar`")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Grafik Historis
-    st.markdown("#### 📈 Tren Penurunan Kadar Air & Keseimbangan Termal")
+    st.markdown("#### 📈 Dinamika Penurunan Kadar Air & Suhu Proses")
     if st.session_state.history:
         df_hist = pd.DataFrame(st.session_state.history).set_index("Jam")
         g1, g2 = st.columns(2)
         with g1:
-            st.caption("Penurunan Kadar Air Gabah (%) per Jam")
+            st.caption("Penurunan Kadar Air Gabah (%)")
             st.line_chart(df_hist[["Kadar Air (%)"]], color="#3fb950")
         with g2:
-            st.caption("Dinamika Suhu (°C): Tungku Biomassa vs Ruang Pengering")
+            st.caption("Profil Suhu (°C): Tungku vs Ruang Pengering")
             st.line_chart(df_hist[["Suhu Tungku (°C)", "Suhu Pengering (°C)"]], color=["#f0883e", "#58a6ff"])
     else:
-        st.info("💡 Tekan tombol **'⏱️ +1 Jam Proses'** pada panel sidebar sebelah kiri untuk melihat simulasi dinamis grafik penurunan kadar air.")
+        st.caption("Klik tombol **'⏱️ +1 Jam Proses'** pada sidebar untuk menjalankan simulasi deret waktu kinetika pengeringan.")
 
 # ====================================================================
-# TAB 2: HMI DIGITAL TWIN (PERSIS GAMBAR 1 DI PROPOSAL)
+# TAB 2: HMI DIGITAL TWIN ALUR SISTEM
 # ====================================================================
 with tab_hmi:
     st.markdown("### 🗺️ Skema Digital Twin Alur Termal & Sirkular Karbon")
@@ -283,30 +283,25 @@ with tab_hmi:
         </marker>
       </defs>
 
-      <!-- 1. TUNGKU BIOMASSA -->
       <rect x="30" y="80" width="160" height="150" rx="8" fill="#21262d" stroke="#f0883e" stroke-width="2"/>
       <text x="110" y="110" fill="#f0883e" font-size="13" font-weight="bold" text-anchor="middle">🔥 TUNGKU BIOMASSA</text>
       <text x="110" y="130" fill="#8b949e" font-size="11" text-anchor="middle">Bahan: Batang Padi</text>
       <rect x="50" y="150" width="120" height="50" rx="4" fill="#0d1117" stroke="#30363d"/>
       <text x="110" y="180" fill="#ff7b72" font-size="18" font-weight="bold" text-anchor="middle">{suhu_tungku:.0f} °C</text>
 
-      <!-- FILTER & GAS DUCT -->
       <path d="M 190 140 L 250 140" stroke="#f0883e" stroke-width="4" fill="none" marker-end="url(#arrow-orange)"/>
       <rect x="250" y="90" width="90" height="100" rx="6" fill="#21262d" stroke="#8b949e" stroke-width="1.5"/>
       <text x="295" y="130" fill="#e6edf3" font-size="11" font-weight="bold" text-anchor="middle">FILTER GAS</text>
       <text x="295" y="150" fill="#3fb950" font-size="10" text-anchor="middle">HEPA & Coarse</text>
 
-      <!-- 2. HEAT EXCHANGER HIBRIDA -->
       <path d="M 340 140 L 390 140" stroke="#f0883e" stroke-width="4" fill="none" marker-end="url(#arrow-orange)"/>
       <circle cx="440" cy="140" r="50" fill="#1f242c" stroke="#58a6ff" stroke-width="3"/>
       <text x="440" y="135" fill="#58a6ff" font-size="12" font-weight="bold" text-anchor="middle">HEAT</text>
       <text x="440" y="152" fill="#58a6ff" font-size="12" font-weight="bold" text-anchor="middle">EXCHANGER</text>
 
-      <!-- UDARA BERSIH PANAS KE PENGERING -->
       <path d="M 490 140 L 570 140" stroke="#f0883e" stroke-width="5" fill="none" marker-end="url(#arrow-orange)"/>
       <text x="530" y="130" fill="#f0883e" font-size="10" text-anchor="middle">Udara Bersih</text>
 
-      <!-- 3. RUMAH PENGERING GABAH -->
       <rect x="580" y="60" width="180" height="170" rx="8" fill="#1b2a1e" stroke="#3fb950" stroke-width="2"/>
       <text x="670" y="90" fill="#3fb950" font-size="14" font-weight="bold" text-anchor="middle">🌾 RUMAH PENGERING</text>
       <text x="670" y="110" fill="#8b949e" font-size="11" text-anchor="middle">Dimensi: 6m × 4m × 3m</text>
@@ -315,7 +310,6 @@ with tab_hmi:
       <text x="670" y="175" fill="#3fb950" font-size="17" font-weight="bold" text-anchor="middle">KA: {current_ka:.2f} %</text>
       <text x="670" y="195" fill="#8b949e" font-size="10" text-anchor="middle">Batch: {kapasitas_gabah}</text>
 
-      <!-- GAS BUANG CO2 KE STORAGE & KOLAM ALGA -->
       <path d="M 440 190 L 440 280 L 550 280" stroke="#8b949e" stroke-dasharray="4" stroke-width="3" fill="none" marker-end="url(#arrow-blue)"/>
       <rect x="550" y="250" width="100" height="60" rx="4" fill="#21262d" stroke="#8b949e" stroke-width="1.5"/>
       <text x="600" y="275" fill="#e6edf3" font-size="10" font-weight="bold" text-anchor="middle">STORAGE DRUM</text>
@@ -323,13 +317,11 @@ with tab_hmi:
 
       <path d="M 650 280 L 710 280" stroke="#3fb950" stroke-width="3" fill="none" marker-end="url(#arrow-green)"/>
 
-      <!-- 4. KOLAM MIKROALGA -->
       <rect x="720" y="240" width="190" height="90" rx="8" fill="#063222" stroke="#2ea043" stroke-width="2"/>
       <text x="815" y="265" fill="#3fb950" font-size="12" font-weight="bold" text-anchor="middle">🧪 BAK MIKROALGA</text>
       <text x="815" y="285" fill="#7ee787" font-size="11" text-anchor="middle">Bio-Capture: {bio_co2:.1f}%</text>
-      <text x="815" y="310" fill="#8b949e" font-size="10" text-anchor="middle">Produksi Biomassa Nilai Tambah</text>
+      <text x="815" y="310" fill="#8b949e" font-size="10" text-anchor="middle">Produksi Biomassa Mikroalga</text>
 
-      <!-- 5. PLTS ENERGY SYSTEM DI BAWAH -->
       <rect x="50" y="260" width="220" height="90" rx="8" fill="#1f2328" stroke="#d29922" stroke-width="2"/>
       <text x="160" y="285" fill="#d29922" font-size="12" font-weight="bold" text-anchor="middle">☀️ PLTS SURYA HYBRID</text>
       <text x="160" y="308" fill="#e6edf3" font-size="11" text-anchor="middle">Daya Suplai: {daya_plts:.0f} Wp</text>
@@ -339,24 +331,24 @@ with tab_hmi:
     st.components.v1.html(svg_hmi, height=430)
 
 # ====================================================================
-# TAB 3: SPESIFIKASI TEKNIK & TIM PENELITI
+# TAB 3: SPESIFIKASI & METODOLOGI
 # ====================================================================
 with tab_spek:
-    st.markdown("### 📋 Ringkasan Teknis Proyek (PFsains 2026)")
+    st.markdown("### 📋 Spesifikasi Sistem & Validasi Lapangan")
     
     col_t1, col_t2 = st.columns(2)
     with col_t1:
         st.markdown("""
         **Spesifikasi Fisik & Kapasitas:**
-        - **Dimensi Rumah Pengering:** $\\pm 6\\text{ m} \\times 4\\text{ m} \\times 3\\text{ m}$
-        - **Kapasitas Batch:** $\\pm 1\\text{ Ton}$ gabah segar per siklus pengeringan (18–24 jam)
-        - **Material:** Rangka galvanis, penutup polikarbonat UV-protected, lantai rak stainless steel
-        - **Tingkat Kesiapan Teknologi:** TKT 6–7 (Prototipe teruji di lingkungan operasional nyata)
+        - **Dimensi Pengering:** $\\pm 6\\text{ m} \\times 4\\text{ m} \\times 3\\text{ m}$[span_1](start_span)[span_1](end_span)
+        - **Kapasitas Batch:** $\\pm 1\\text{ Ton}$ gabah segar per siklus pengeringan (18–24 jam)[span_2](start_span)[span_2](end_span)
+        - **Material:** Rangka galvanis, penutup polikarbonat UV-protected, lantai rak stainless steel[span_3](start_span)[span_3](end_span)
+        - **Tingkat Kesiapan Teknologi:** TKT 6–7 (Prototipe teruji di lingkungan operasional sebenarnya)[span_4](start_span)[span_4](end_span)
         """)
     with col_t2:
         st.markdown("""
         **Kemitraan & Lokasi:**
-        - **Lokasi Implementasi:** Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora
-        - **Dukungan Mitra:** PT Pertamina EP Cepu Field Cepu & Pertamina Foundation
-        - **Standar Output:** SNI 6128:2020 (Kadar air aman simpan $\\leq 14\\%$)
+        - **Lokasi Implementasi:** Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kec. Kedungtuban, Kab. Blora[span_5](start_span)[span_5](end_span)
+        - **Dukungan Program:** Kompetisi PFsains Pertamina Foundation 2026[span_6](start_span)[span_6](end_span)
+        - **Standar Output:** SNI 6128:2020 (Kadar air gabah kering giling $\\leq 14\\%$)[span_7](start_span)[span_7](end_span)
         """)
