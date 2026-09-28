@@ -1,5 +1,5 @@
 """
-SI-PADI-Panel Monitoring & Kendali Pengering Gabah Hibrida Surya-Biomassa
+SI-PADI-Panel Monitoring & Kendali Pengering Gabah Hibrida Surya-Biomassa 
 
 Jalankan:   streamlit run app.py
 Kebutuhan:  streamlit >= 1.50 (st.fragment, parameter width), pandas, altair
@@ -541,7 +541,7 @@ st.markdown("""
 .topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap;
   background:linear-gradient(180deg,#181b24 0%,#13151c 100%); border:1px solid #282d3c; border-radius:10px;
   padding:16px 22px; margin-bottom:14px; }
-.topbar h1 { font-size:22px; font-weight:700; color:#f1f3f7; margin:0; padding:0; letter-spacing:-0.2px; }
+.topbar .judul-app { font-size:22px; line-height:1.3; font-weight:700; color:#f1f3f7; margin:0; padding:0; letter-spacing:-0.2px; }
 .topbar p { font-size:13px; color:#9299a8; margin:4px 0 0 0; }
 .chips { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .chip { background:#1a1e29; border:1px solid #333a4d; border-radius:6px; padding:5px 11px; font-size:12.5px; color:#c9ccd4; }
@@ -587,10 +587,13 @@ st.markdown("""
 .logi { font-size:12px; color:#9299a8; padding:5px 0; border-bottom:1px solid #1f2431; }
 .logi b { color:#c9ccd4; font-variant-numeric:tabular-nums; }
 .catatan { font-size:12.5px; color:#8890a1; line-height:1.55; }
+.sub-j { font-size:15px; font-weight:700; color:#e2e4e9; margin:12px 0 6px 0; }
+.side-j { font-size:17px; font-weight:700; color:#f1f3f7; margin:4px 0 6px 0; }
+[data-testid="stHeaderActionElements"] { display:none !important; }
 .grafik svg { width:100%; height:auto; display:block; font-family:inherit; }
 .grafik { margin:2px 0 6px 0; }
 /* Hilangkan kedip saat data diperbarui tiap detik */
-[data-testid="stStatusWidget"] { visibility:hidden !important; }
+[data-testid="stStatusWidget"] { display:none !important; }
 [data-stale="true"], [data-stale="true"] * { opacity:1 !important; transition:none !important; filter:none !important; }
 .sek-j { font-size:19px; font-weight:700; color:#f1f3f7; margin:26px 0 4px 0; letter-spacing:-0.2px; }
 .sek-j.pertama { margin-top:6px; }
@@ -702,8 +705,8 @@ def sinkron():
 # SIDEBAR - KONSOL DEMO
 # ==============================================================================
 with st.sidebar:
-    st.markdown("### Konsol Demo")
-    st.caption("skala 4 menit demo = 24 jam proses")
+    html('<div class="side-j">Konsol Demo</div>')
+    st.caption("4 menit demo = 24 jam proses")
     kol1, kol2 = st.columns(2)
     with kol1:
         if st.session_state.berjalan:
@@ -731,7 +734,7 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.markdown("### Cuaca")
+    html('<div class="side-j">Cuaca</div>')
     st.selectbox("Kondisi radiasi matahari", list(PILIHAN_CUACA), key="k_cuaca",
                  help="Skenario demo: pagi cerah, 12:00 berawan, 14:00 hujan, 16:00 berawan, "
                       "17:30 cerah, lalu malam. Menunjukkan peralihan energi hibrida secara otomatis.")
@@ -773,7 +776,7 @@ def header():
     html(f"""
     <div class="topbar">
       <div>
-        <h1>🌾 SI-PADI - Panel Monitoring Pengering Gabah Padi</h1>
+        <div class="judul-app">🌾 SI-PADI - Panel Monitoring Pengering Gabah Padi</div>
         <p>Rumah pengering hibrida surya-biomassa 1 ton, 3 zona sensor rak, Pusat Organik PUSAKA BLORA, Desa Sidorejo, Kedungtuban, Blora</p>
       </div>
       <div class="chips">
@@ -1048,7 +1051,7 @@ with tab_dash:
             </div>""")
 
             df = df_riwayat()
-            st.markdown("##### Penurunan kadar air tiap rak")
+            html('<div class="sub-j">Penurunan kadar air tiap rak</div>')
             legenda(LEGENDA_RAK_SVG() + [(f"Target {f1(k['target_ka'])} %", "#3fb950", True)])
             grafik_svg("ka", df, GRAFIK_RAK("ka"),
                        dict(domain=(12, 29), ticks=[12, 15, 18, 21, 24, 27], judul="Kadar air (% bb)"),
@@ -1056,13 +1059,13 @@ with tab_dash:
                        lebar=820, tinggi=260)
             g1, g2 = st.columns(2)
             with g1:
-                st.markdown("##### Suhu rak")
+                html('<div class="sub-j">Suhu rak</div>')
                 grafik_svg("suhu", df, GRAFIK_RAK("suhu"),
                            dict(domain=(20, 60), ticks=[20, 30, 40, 50, 60], judul="Suhu (°C)"),
                            garis=[dict(y=k["setpoint"], warna="#3fb950", teks=f"Setpoint {f1(k['setpoint'], 0)} °C")],
                            judul_x="Jam proses", lebar=460, tinggi=240)
             with g2:
-                st.markdown("##### Kelembapan relatif rak")
+                html('<div class="sub-j">Kelembapan relatif rak</div>')
                 grafik_svg("rh", df, GRAFIK_RAK("rh"),
                            dict(domain=(0, 100), ticks=[0, 25, 50, 75, 100], judul="RH (%)"),
                            judul_x="Jam proses", lebar=460, tinggi=240)
@@ -1154,7 +1157,7 @@ with tab_energi:
         df = df_riwayat()
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown("##### Neraca listrik PLTS, beban, dan baterai")
+            html('<div class="sub-j">Neraca listrik PLTS, beban, dan baterai</div>')
             legenda([("Produksi PLTS (W)", "#58a6ff", False), ("Beban (W)", "#c9ccd4", False),
                      ("SOC baterai (%)", "#3fb950", True)])
             grafik_svg("daya", df,
@@ -1167,7 +1170,7 @@ with tab_energi:
                        f"PLTS menghasilkan {f1(s['kwh_pv'])} kWh, beban memakai {f1(s['kwh_beban'])} kWh, "
                        f"jaringan PLN {f1(s['kwh_grid'])} kWh.")
         with c2:
-            st.markdown("##### Daya tungku dan suhu udara")
+            html('<div class="sub-j">Daya tungku dan suhu udara</div>')
             legenda([("Udara masuk ruang (°C)", "#d19a38", False), ("Udara luar (°C)", "#8890a1", False),
                      ("Daya tungku (%)", "#ff7b72", False)])
             grafik_svg("panas", df,
@@ -1221,12 +1224,12 @@ with tab_emisi:
         df = df_riwayat()
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown("##### CO gas buang")
+            html('<div class="sub-j">CO gas buang</div>')
             grafik_svg("co", df, [dict(kolom="co", warna="#e5a43b")],
                        dict(domain=(0, 700), ticks=[0, 200, 400, 600], judul="CO (mg/Nm³)"),
                        garis=[dict(y=AMBANG_CO, warna="#ff7b72", teks=f"Ambang {AMBANG_CO:.0f}")], tinggi=230)
         with c2:
-            st.markdown("##### Partikulat gas buang setelah filter")
+            html('<div class="sub-j">Partikulat gas buang setelah filter</div>')
             grafik_svg("pm", df, [dict(kolom="pm", warna="#58a6ff")],
                        dict(domain=(0, 60), ticks=[0, 20, 40, 60], judul="Partikulat (mg/Nm³)"),
                        garis=[dict(y=AMBANG_PM, warna="#ff7b72", teks=f"Ambang {AMBANG_PM:.0f}")], tinggi=230)
@@ -1456,7 +1459,7 @@ with tab_log:
         else:
             st.info("Ringkasan batch tampil setelah semua rak mencapai target.")
 
-        st.markdown("##### Log kejadian")
+        html('<div class="sub-j">Log kejadian</div>')
         log = pd.DataFrame(s["log"][::-1])
         log["Jam proses"] = log["Jam proses"].map(lambda x: f1(x, 2))
         st.dataframe(log, hide_index=True, width="stretch", height=300)
